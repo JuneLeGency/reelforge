@@ -91,10 +91,12 @@ export class HtmlCompileError extends Error {
 
 function extractConfig(root: HTMLElement): ProjectConfig {
   const htmlEl = root.querySelector('html');
+  const duration = readNumber(htmlEl, 'data-rf-duration');
   return {
     width: readInt(htmlEl, 'data-rf-width') ?? DEFAULT_CONFIG.width,
     height: readInt(htmlEl, 'data-rf-height') ?? DEFAULT_CONFIG.height,
     fps: readNumber(htmlEl, 'data-rf-fps') ?? DEFAULT_CONFIG.fps,
+    ...(duration !== undefined && duration > 0 ? { duration } : {}),
   };
 }
 

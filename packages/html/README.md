@@ -21,6 +21,7 @@ Put timing on any element with `data-start` + `data-duration` (in seconds). Medi
 | Attribute | Type | Maps to |
 |---|---|---|
 | `data-rf-width` / `data-rf-height` / `data-rf-fps` (on `<html>`) | number | `config.*` |
+| `data-rf-duration` (on `<html>`) | seconds | `config.duration` — pins total length (otherwise derived from latest clip end) |
 | `data-start` | seconds | `clip.startMs` |
 | `data-duration` | seconds | `clip.durationMs` |
 | `data-source-start` | seconds | `clip.sourceStartMs` |

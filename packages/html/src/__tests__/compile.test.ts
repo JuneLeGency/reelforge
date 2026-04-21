@@ -14,6 +14,22 @@ describe('compileHtml — config', () => {
     const { project } = compileHtml('<html><body></body></html>', { baseDir: '.' });
     expect(project.config).toEqual({ width: 1920, height: 1080, fps: 30 });
   });
+
+  test('reads data-rf-duration into config.duration (seconds)', () => {
+    const { project } = compileHtml(
+      '<html data-rf-duration="5"><body></body></html>',
+      { baseDir: '.' },
+    );
+    expect(project.config.duration).toBe(5);
+  });
+
+  test('ignores non-positive data-rf-duration', () => {
+    const { project } = compileHtml(
+      '<html data-rf-duration="0"><body></body></html>',
+      { baseDir: '.' },
+    );
+    expect(project.config.duration).toBeUndefined();
+  });
 });
 
 describe('compileHtml — image clips', () => {

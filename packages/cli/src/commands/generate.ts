@@ -120,6 +120,17 @@ export function assignSlides(
   return slides;
 }
 
+export interface CaptionOverlayStyle {
+  fontSize?: number;
+  fontFamily?: string;
+  color?: string;
+  background?: string;
+  padding?: string;
+  borderRadius?: string;
+  marginBottomPct?: number; // 0..50
+  maxWidthPct?: number; // 0..100
+}
+
 export interface BuildHtmlOptions {
   width: number;
   height: number;
@@ -128,7 +139,27 @@ export interface BuildHtmlOptions {
   audioRelative: string;
   audioDurationMs: number;
   title?: string;
+  /** When provided, each entry becomes a WAAPI-animated overlay div. */
+  captions?: readonly Caption[];
+  captionStyle?: CaptionOverlayStyle;
+  /**
+   * Total timeline duration for animation keyframe math. Defaults to
+   * `audioDurationMs`. Lets callers align animation math to a different
+   * reference if needed.
+   */
+  totalDurationMs?: number;
 }
+
+const DEFAULT_CAPTION_STYLE: Required<CaptionOverlayStyle> = {
+  fontSize: 36,
+  fontFamily: '-apple-system, system-ui, "Segoe UI", Roboto, sans-serif',
+  color: '#ffffff',
+  background: 'rgba(0, 0, 0, 0.55)',
+  padding: '14px 28px',
+  borderRadius: '12px',
+  marginBottomPct: 8,
+  maxWidthPct: 80,
+};
 
 /**
  * Turn sentence boundaries into one {@link Caption} per sentence — suitable
@@ -148,6 +179,9 @@ export function sentenceCaptions(sentences: readonly Sentence[]): Caption[] {
 export function buildGenerateHtml(opts: BuildHtmlOptions): string {
   const { width, height, fps, slides, audioRelative, audioDurationMs } = opts;
   const title = opts.title ?? 'Reelforge generated video';
+  const totalMs = opts.totalDurationMs ?? audioDurationMs;
+  const captions = opts.captions ?? [];
+  const style = { ...DEFAULT_CAPTION_STYLE, ...(opts.captionStyle ?? {}) };
 
   const imgTags = slides
     .map((s, i) => {
@@ -157,7 +191,21 @@ export function buildGenerateHtml(opts: BuildHtmlOptions): string {
     })
     .join('\n');
 
+  const captionDivs = captions
+    .map(
+      (c, i) =>
+        `    <div class="caption" id="caption-${i}">${escapeText(c.text.trim())}</div>`,
+    )
+    .join('\n');
+
+  const captionScript =
+    captions.length > 0
+      ? renderCaptionScript(captions, totalMs)
+      : '';
+
   const audioDurSec = (audioDurationMs / 1000).toFixed(3);
+  const captionBottomVh = style.marginBottomPct;
+  const captionMaxWidthVw = style.maxWidthPct;
 
   return `<!DOCTYPE html>
 <html data-rf-width="${width}" data-rf-height="${height}" data-rf-fps="${fps}">
@@ -165,7 +213,7 @@ export function buildGenerateHtml(opts: BuildHtmlOptions): string {
   <meta charset="utf-8">
   <title>${escapeText(title)}</title>
   <style>
-    html, body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+    html, body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: ${style.fontFamily}; }
     #stage { position: relative; width: 100vw; height: 100vh; }
     #stage img {
       position: absolute;
@@ -175,16 +223,71 @@ export function buildGenerateHtml(opts: BuildHtmlOptions): string {
       object-fit: cover;
       visibility: hidden;
     }
+    .caption {
+      position: absolute;
+      left: 50%;
+      bottom: ${captionBottomVh}vh;
+      transform: translateX(-50%);
+      max-width: ${captionMaxWidthVw}vw;
+      text-align: center;
+      font-size: ${style.fontSize}px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: ${style.color};
+      background: ${style.background};
+      padding: ${style.padding};
+      border-radius: ${style.borderRadius};
+      opacity: 0;
+      pointer-events: none;
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
   <div id="stage">
 ${imgTags}
+${captionDivs}
     <audio src="${escapeAttr(audioRelative)}" data-start="0" data-duration="${audioDurSec}"></audio>
-  </div>
+  </div>${captionScript}
 </body>
 </html>
 `;
+}
+
+function renderCaptionScript(captions: readonly Caption[], totalMs: number): string {
+  const entries = captions
+    .map(
+      (c, i) =>
+        `    {id:'caption-${i}',startMs:${Math.round(c.startMs)},endMs:${Math.round(c.endMs)}}`,
+    )
+    .join(',\n');
+  const total = Math.max(1, Math.round(totalMs));
+  const edge = 16; // ms — shorter than one frame at 60 fps, to snap opacity changes.
+  return `
+  <script>
+    (function () {
+      var caps = [
+${entries}
+      ];
+      var total = ${total};
+      caps.forEach(function (c) {
+        var el = document.getElementById(c.id);
+        if (!el) return;
+        var pre = Math.max(0, (c.startMs - ${edge}) / total);
+        var on = c.startMs / total;
+        var off = Math.min(1, (c.endMs) / total);
+        var postOff = Math.min(1, (c.endMs + ${edge}) / total);
+        el.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: pre },
+          { opacity: 1, offset: on },
+          { opacity: 1, offset: off },
+          { opacity: 0, offset: postOff },
+          { opacity: 0, offset: 1 }
+        ], { duration: total, fill: 'both', easing: 'linear' });
+      });
+    })();
+  </script>`;
 }
 
 function escapeAttr(s: string): string {
@@ -239,9 +342,14 @@ export const generateCommand = defineCommand({
       type: 'string',
       description: 'Also write a word-level SRT file (sentence-level SRT is always written next to the MP4)',
     },
+    noCaptions: {
+      type: 'boolean',
+      description: 'Do not inject a DOM caption overlay into the generated HTML',
+      default: false,
+    },
     burn: {
       type: 'boolean',
-      description: 'Burn the sentence-level SRT into the video (requires ffmpeg with libass)',
+      description: 'Also burn the sentence-level SRT into the video via ffmpeg (requires ffmpeg with libass). DOM captions are the recommended path — this flag is for users who need an additional ffmpeg-burnt layer.',
       default: false,
     },
     subtitleStyle: {
@@ -309,6 +417,7 @@ export const generateCommand = defineCommand({
     const audioPath = join(workdir, 'narration.mp3');
     await writeFile(audioPath, result.audio);
 
+    const sentenceCaps = sentenceCaptions(sentences);
     const htmlPath = join(workdir, 'index.html');
     await writeFile(
       htmlPath,
@@ -319,6 +428,7 @@ export const generateCommand = defineCommand({
         slides,
         audioRelative: 'narration.mp3',
         audioDurationMs: result.durationMs,
+        ...(args.noCaptions ? {} : { captions: sentenceCaps }),
       }),
     );
 
@@ -345,7 +455,7 @@ export const generateCommand = defineCommand({
 
     console.error(`→ muxing audio`);
     const sentenceSrtPath = outputPath.replace(/\.mp4$/i, '.srt');
-    const sentenceSrtBody = captionsToSrt(sentenceCaptions(sentences));
+    const sentenceSrtBody = captionsToSrt(sentenceCaps);
     await writeFile(sentenceSrtPath, sentenceSrtBody, 'utf8');
 
     const muxOutput = args.burn ? join(workdir, 'muxed.mp4') : outputPath;

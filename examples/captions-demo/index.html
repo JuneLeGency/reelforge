@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html data-rf-width="1280" data-rf-height="720" data-rf-fps="30" data-rf-duration="3">
+<head>
+  <meta charset="utf-8">
+  <title>WAAPI caption overlay demo</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+    #stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(circle at 30% 40%, rgba(255,255,255,0.15), transparent 55%);
+    }
+    .title {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.9);
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      text-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+    .caption {
+      position: absolute;
+      left: 50%;
+      bottom: 10vh;
+      transform: translateX(-50%);
+      max-width: 80vw;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.55);
+      padding: 14px 28px;
+      border-radius: 12px;
+      opacity: 0;
+      white-space: pre-wrap;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div class="title">WAAPI captions</div>
+    <div class="caption" id="caption-0">First caption: zero to one second.</div>
+    <div class="caption" id="caption-1">Second caption: one to two seconds.</div>
+    <div class="caption" id="caption-2">Third caption: two to three seconds.</div>
+  </div>
+  <script>
+    (function () {
+      var caps = [
+        { id: 'caption-0', startMs: 0, endMs: 1000 },
+        { id: 'caption-1', startMs: 1000, endMs: 2000 },
+        { id: 'caption-2', startMs: 2000, endMs: 3000 }
+      ];
+      var total = 3000;
+      var edge = 16;
+      caps.forEach(function (c) {
+        var el = document.getElementById(c.id);
+        if (!el) return;
+        var pre = Math.max(0, (c.startMs - edge) / total);
+        var on = c.startMs / total;
+        var off = Math.min(1, c.endMs / total);
+        var postOff = Math.min(1, (c.endMs + edge) / total);
+        el.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: pre },
+          { opacity: 1, offset: on },
+          { opacity: 1, offset: off },
+          { opacity: 0, offset: postOff },
+          { opacity: 0, offset: 1 }
+        ], { duration: total, fill: 'both', easing: 'linear' });
+      });
+    })();
+  </script>
+</body>
+</html>

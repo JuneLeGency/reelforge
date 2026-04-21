@@ -184,4 +184,105 @@ describe('buildGenerateHtml', () => {
     });
     expect(html).toContain('visibility: hidden');
   });
+
+  test('no caption script when captions are omitted', () => {
+    const html = buildGenerateHtml({
+      width: 1280,
+      height: 720,
+      fps: 30,
+      slides: [{ image: 'x.png', startMs: 0, durationMs: 1000 }],
+      audioRelative: 'n.mp3',
+      audioDurationMs: 1000,
+    });
+    expect(html).not.toContain('class="caption"');
+    expect(html).not.toContain('<script>');
+  });
+
+  test('captions become absolutely-positioned WAAPI-animated divs', () => {
+    const html = buildGenerateHtml({
+      width: 1280,
+      height: 720,
+      fps: 30,
+      slides: [{ image: 'x.png', startMs: 0, durationMs: 5000 }],
+      audioRelative: 'n.mp3',
+      audioDurationMs: 5000,
+      captions: [
+        {
+          text: 'Hello world',
+          startMs: 200,
+          endMs: 1500,
+          timestampMs: null,
+          confidence: null,
+        },
+        {
+          text: 'Second cue',
+          startMs: 1500,
+          endMs: 3000,
+          timestampMs: null,
+          confidence: null,
+        },
+      ],
+    });
+    expect(html).toContain('id="caption-0"');
+    expect(html).toContain('>Hello world<');
+    expect(html).toContain('id="caption-1"');
+    expect(html).toContain('>Second cue<');
+    expect(html).toContain('.caption {');
+    expect(html).toContain('position: absolute');
+    expect(html).toContain('opacity: 0');
+    expect(html).toContain('<script>');
+    expect(html).toContain("startMs:200");
+    expect(html).toContain("endMs:1500");
+    expect(html).toContain('.animate([');
+  });
+
+  test('caption text is escaped', () => {
+    const html = buildGenerateHtml({
+      width: 1280,
+      height: 720,
+      fps: 30,
+      slides: [{ image: 'x.png', startMs: 0, durationMs: 1000 }],
+      audioRelative: 'n.mp3',
+      audioDurationMs: 1000,
+      captions: [
+        {
+          text: '<script>alert(1)</script>',
+          startMs: 0,
+          endMs: 1000,
+          timestampMs: null,
+          confidence: null,
+        },
+      ],
+    });
+    expect(html).not.toContain('<script>alert(1)</script>');
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+
+  test('custom captionStyle overrides defaults', () => {
+    const html = buildGenerateHtml({
+      width: 1280,
+      height: 720,
+      fps: 30,
+      slides: [{ image: 'x.png', startMs: 0, durationMs: 1000 }],
+      audioRelative: 'n.mp3',
+      audioDurationMs: 1000,
+      captions: [
+        {
+          text: 'hi',
+          startMs: 0,
+          endMs: 1000,
+          timestampMs: null,
+          confidence: null,
+        },
+      ],
+      captionStyle: {
+        fontSize: 48,
+        color: 'yellow',
+        marginBottomPct: 20,
+      },
+    });
+    expect(html).toContain('font-size: 48px');
+    expect(html).toContain('color: yellow');
+    expect(html).toContain('bottom: 20vh');
+  });
 });

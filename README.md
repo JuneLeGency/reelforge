@@ -27,7 +27,7 @@ bun packages/cli/src/bin.ts generate examples/narration-demo/config.json \
   -o out/narration.mp4 --srt out/narration.srt
 ```
 
-Slide durations are aligned to sentence-level TTS word timings — no manual timing. See [`examples/narration-demo/`](./examples/narration-demo).
+Slide durations are aligned to sentence-level TTS word timings — no manual timing. DOM-overlay captions are baked in automatically (see [`examples/captions-demo/`](./examples/captions-demo) for the standalone proof — captions work with **any** ffmpeg, no libass required). See [`examples/narration-demo/`](./examples/narration-demo).
 
 ### All CLI commands
 
@@ -79,7 +79,7 @@ Full detail in [DESIGN.md](./DESIGN.md).
 | [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
 | [`@reelforge/cli`](./packages/cli) | `reelforge render` / `reelforge tts` command line |
 
-**113 tests across 7 packages, all green.**
+**128 tests across 7 packages, all green.**
 
 ## Design principles
 
