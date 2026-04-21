@@ -1,0 +1,52 @@
+# Reference repositories — local only, not part of the project
+ref/
+
+# Claude Code local settings (per-user, never commit)
+.claude/settings.local.json
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Bun
+bun.lockb
+
+# Build output
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Render artifacts (avoid committing large binaries)
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.avi
+!docs/**/*.mp4
+!docs/**/*.webm
+
+# Temp / logs
+*.log
+.cache/
+tmp/
+temp/
