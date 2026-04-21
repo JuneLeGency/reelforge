@@ -69,9 +69,11 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
 
     for (let frame = 0; frame < totalFrames; frame++) {
       const timeMs = frame * frameStepMs;
-      await page.evaluate((t: number) => {
-        const w = window as unknown as { __rf?: { seekFrame: (ms: number) => void } };
-        w.__rf?.seekFrame(t);
+      await page.evaluate(async (t: number) => {
+        const w = window as unknown as {
+          __rf?: { seekFrame: (ms: number) => Promise<unknown> };
+        };
+        await w.__rf?.seekFrame(t);
       }, timeMs);
       const buffer = (await page.screenshot({
         type: 'png',
