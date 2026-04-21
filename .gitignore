@@ -42,6 +42,9 @@ Thumbs.db
 *.mov
 *.mkv
 *.avi
+
+# Stray files from shell commands accidentally redirecting to "-" as a path
+/-
 !docs/**/*.mp4
 !docs/**/*.webm
 
