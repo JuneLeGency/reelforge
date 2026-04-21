@@ -17,6 +17,23 @@
         "@reelforge/ir": "workspace:*",
       },
     },
+    "packages/cli": {
+      "name": "@reelforge/cli",
+      "version": "0.0.0",
+      "bin": {
+        "reelforge": "./src/bin.ts",
+        "rf": "./src/bin.ts",
+      },
+      "dependencies": {
+        "@reelforge/captions": "workspace:*",
+        "@reelforge/engine-chrome": "workspace:*",
+        "@reelforge/html": "workspace:*",
+        "@reelforge/ir": "workspace:*",
+        "@reelforge/mux": "workspace:*",
+        "@reelforge/providers-tts-elevenlabs": "workspace:*",
+        "citty": "^0.1.6",
+      },
+    },
     "packages/engine-chrome": {
       "name": "@reelforge/engine-chrome",
       "version": "0.0.0",
@@ -47,6 +64,13 @@
         "@reelforge/ir": "workspace:*",
       },
     },
+    "packages/providers-tts-elevenlabs": {
+      "name": "@reelforge/providers-tts-elevenlabs",
+      "version": "0.0.0",
+      "dependencies": {
+        "@reelforge/captions": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@oxlint/darwin-arm64": ["@oxlint/darwin-arm64@0.15.15", "https://mirrors.huaweicloud.com/repository/npm/@oxlint/darwin-arm64/-/darwin-arm64-0.15.15.tgz", { "os": "darwin", "cpu": "arm64" }, "sha512-7GOyGM6D36lUhsOvavAVpF72SycPVG0Enunx0bzv8g0+9TklzOSFN3FJlZjLst14VPdZWujZMLgkQC7tOp+Rwg=="],
@@ -69,6 +93,8 @@
 
     "@reelforge/captions": ["@reelforge/captions@workspace:packages/captions"],
 
+    "@reelforge/cli": ["@reelforge/cli@workspace:packages/cli"],
+
     "@reelforge/engine-chrome": ["@reelforge/engine-chrome@workspace:packages/engine-chrome"],
 
     "@reelforge/html": ["@reelforge/html@workspace:packages/html"],
@@ -76,6 +102,8 @@
     "@reelforge/ir": ["@reelforge/ir@workspace:packages/ir"],
 
     "@reelforge/mux": ["@reelforge/mux@workspace:packages/mux"],
+
+    "@reelforge/providers-tts-elevenlabs": ["@reelforge/providers-tts-elevenlabs@workspace:packages/providers-tts-elevenlabs"],
 
     "@tootallnate/quickjs-emscripten": ["@tootallnate/quickjs-emscripten@0.23.0", "https://mirrors.huaweicloud.com/repository/npm/@tootallnate/quickjs-emscripten/-/quickjs-emscripten-0.23.0.tgz", {}, "sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA=="],
 
@@ -121,11 +149,15 @@
 
     "chromium-bidi": ["chromium-bidi@0.11.0", "https://mirrors.huaweicloud.com/repository/npm/chromium-bidi/-/chromium-bidi-0.11.0.tgz", { "dependencies": { "mitt": "3.0.1", "zod": "3.23.8" }, "peerDependencies": { "devtools-protocol": "*" } }, "sha512-6CJWHkNRoyZyjV9Rwv2lYONZf1Xm0IuDyNq97nwSsxxP3wf5Bwy15K5rOvVKMtJ127jJBmxFUanSAOjgFRxgrA=="],
 
+    "citty": ["citty@0.1.6", "https://mirrors.huaweicloud.com/repository/npm/citty/-/citty-0.1.6.tgz", { "dependencies": { "consola": "^3.2.3" } }, "sha512-tskPPKEs8D2KPafUypv2gxwJP8h/OaJmC82QQGGDQcHvXX43xF2VDACcJVmZ0EuSxkpO9Kc4MlrA3q0+FG58AQ=="],
+
     "cliui": ["cliui@8.0.1", "https://mirrors.huaweicloud.com/repository/npm/cliui/-/cliui-8.0.1.tgz", { "dependencies": { "string-width": "^4.2.0", "strip-ansi": "^6.0.1", "wrap-ansi": "^7.0.0" } }, "sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ=="],
 
     "color-convert": ["color-convert@2.0.1", "https://mirrors.huaweicloud.com/repository/npm/color-convert/-/color-convert-2.0.1.tgz", { "dependencies": { "color-name": "~1.1.4" } }, "sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ=="],
 
     "color-name": ["color-name@1.1.4", "https://mirrors.huaweicloud.com/repository/npm/color-name/-/color-name-1.1.4.tgz", {}, "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA=="],
+
+    "consola": ["consola@3.4.2", "https://mirrors.huaweicloud.com/repository/npm/consola/-/consola-3.4.2.tgz", {}, "sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA=="],
 
     "css-select": ["css-select@5.2.2", "https://mirrors.huaweicloud.com/repository/npm/css-select/-/css-select-5.2.2.tgz", { "dependencies": { "boolbase": "^1.0.0", "css-what": "^6.1.0", "domhandler": "^5.0.2", "domutils": "^3.0.1", "nth-check": "^2.0.1" } }, "sha512-TizTzUddG/xYLA3NXodFM0fSbNizXjOKhqiQQwvhlspadZokn1KDy0NZFS0wuEubIYAV5/c1/lAr0TaaFXEXzw=="],
 
