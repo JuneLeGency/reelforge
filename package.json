@@ -1,0 +1,25 @@
+{
+  "name": "reelforge",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Programmatic forge for reels — universal video generation framework",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "typecheck": "tsc -b",
+    "test": "bun --filter '@reelforge/*' test",
+    "lint": "oxlint packages",
+    "format": "oxfmt packages",
+    "format:check": "oxfmt --check packages"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.14",
+    "oxlint": "^0.15.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=22",
+    "bun": ">=1.1"
+  }
+}
