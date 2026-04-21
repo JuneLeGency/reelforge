@@ -2,9 +2,21 @@
 
 > **Programmatic forge for reels.** A universal framework for generating videos from HTML, JSON, TypeScript, or AI agents — with first-class TTS, captions, and image/video/audio composition.
 
-**Status: pre-alpha.** Architecture draft only. No code yet. See [**DESIGN.md**](./DESIGN.md).
+**Status: M1 end-to-end pipeline working.** HTML → IR → Chrome-captured frames → ffmpeg-muxed MP4. See [**DESIGN.md**](./DESIGN.md) for the full architecture.
 
 ---
+
+## Try it in 30 seconds
+
+```bash
+bun install
+bun packages/cli/src/bin.ts render examples/hello-world/index.html -o out/hello.mp4
+open out/hello.mp4
+```
+
+That renders a 3-second 1280×720 30 fps MP4 from an inline-SVG background + WAAPI-animated title — no external assets, no API keys. See [`examples/hello-world/`](./examples/hello-world) for the details and variations (adding narration, changing aspect ratio, etc.).
+
+**Requirements:** Node ≥ 22, `ffmpeg` on `PATH`, Google Chrome installed.
 
 ## Why another video framework?
 
@@ -34,6 +46,20 @@ Renderers   →   Chrome+HTML  |  Canvas+Generator  |  FFmpeg fast path  |  WebC
 
 Full detail in [DESIGN.md](./DESIGN.md).
 
+## Packages
+
+| Package | What it does |
+|---|---|
+| [`@reelforge/ir`](./packages/ir) | TypeScript types + Zod schema for `VideoProject` (the IR everyone compiles to) |
+| [`@reelforge/captions`](./packages/captions) | Word-timings → captions, TikTok-style pagination, SRT round-trip |
+| [`@reelforge/html`](./packages/html) | HTML frontend — compile `data-*`-annotated HTML into IR |
+| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI), image2pipe → ffmpeg |
+| [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video (`atrim` + `adelay` + `amix`) |
+| [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
+| [`@reelforge/cli`](./packages/cli) | `reelforge render` / `reelforge tts` command line |
+
+**79 tests across 7 packages, all green.**
+
 ## Design principles
 
 1. Author once, render anywhere — any frontend compiles to the same IR.
@@ -44,13 +70,24 @@ Full detail in [DESIGN.md](./DESIGN.md).
 
 ## Status & Roadmap
 
-- **M0 — Architecture and skeleton** (current)
-- **M1 — End-to-end MVP**: `@reelforge/html` + `@reelforge/engine-chrome` + ElevenLabs TTS + Whisper captions. Goal: one-sentence → slide video with narration and word-level captions.
-- **M2 — Multiple frontends**: DSL, Agent Skills, MCP
-- **M3 — Multiple backends**: FFmpeg fast path, Canvas + generators
-- **M4 — Ecosystem**: cloud deploy templates, more providers, community skill marketplace
+- ✅ **M0 — Architecture and skeleton** — IR contract, monorepo, toolchain, DESIGN.md
+- ✅ **M1 — End-to-end MVP** — HTML + Chrome engine + ElevenLabs TTS + mux + CLI. *HTML → MP4 pipeline works today; TTS + captions wired for manual pairing (auto-sync pipeline lands in M2).*
+- 🟡 **M2 — Multiple frontends + agent integration** — JSON5 DSL, Skills, MCP server, ScriptGenerator → one-command "sentence → video with synced captions"
+- 🔜 **M3 — Multiple backends** — FFmpeg fast path, Canvas + generators, parallel frame segments, BeginFrame CDP
+- 🔜 **M4 — Ecosystem** — cloud deploy templates, more TTS/STT/image providers, community skill marketplace
 
 Full roadmap in [DESIGN.md §11](./DESIGN.md#11-路线图).
+
+## Contributing
+
+```bash
+bun install          # install workspace deps
+bun run typecheck    # tsc --noEmit across every package
+bun run test         # bun test across every package
+bun run lint         # oxlint
+```
+
+Don't commit `ref/` (the 9 shallow-cloned reference repos) or `.claude/settings.local.json` — both are already gitignored. Render artifacts (`.mp4`, `.webm`, …) are gitignored too.
 
 ## License
 
