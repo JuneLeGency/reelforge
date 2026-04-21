@@ -30,6 +30,7 @@ export {
 export {
   buildGenerateHtml,
   assignSlides,
+  sentenceCaptions,
   splitSentences,
   parseGenerateConfig,
   GenerateConfigError,

@@ -3,7 +3,7 @@ import { dirname, join, resolve as resolvePath } from 'node:path';
 import { defineCommand } from 'citty';
 import { compileHtmlFile } from '@reelforge/html';
 import { renderChrome } from '@reelforge/engine-chrome';
-import { muxAudio } from '@reelforge/mux';
+import { burnSubtitles, muxAudio } from '@reelforge/mux';
 import { resolveChrome } from '../util/chrome';
 
 export const renderCommand = defineCommand({
@@ -36,6 +36,14 @@ export const renderCommand = defineCommand({
       type: 'boolean',
       description: 'Keep the intermediate silent MP4',
       default: false,
+    },
+    burnSubtitles: {
+      type: 'string',
+      description: 'Burn subtitles from this SRT file into the output (requires ffmpeg with libass)',
+    },
+    subtitleStyle: {
+      type: 'string',
+      description: 'libass style override (e.g. "FontSize=32,Alignment=2")',
     },
   },
   async run({ args }) {
@@ -77,9 +85,12 @@ export const renderCommand = defineCommand({
     process.stderr.write('\n');
 
     console.error(`→ muxing audio`);
+    const muxOutput = args.burnSubtitles
+      ? join(dirname(outputPath), `__premux_${Date.now()}.mp4`)
+      : outputPath;
     const { audioClipCount } = await muxAudio({
       silentVideoPath: silentPath,
-      outputPath,
+      outputPath: muxOutput,
       project: compiled.project,
       baseDir: compiled.baseDir,
       ffmpegBinary: args.ffmpeg,
@@ -87,6 +98,18 @@ export const renderCommand = defineCommand({
 
     if (!args.keepSilent) {
       await unlink(silentPath).catch(() => undefined);
+    }
+
+    if (args.burnSubtitles) {
+      console.error(`→ burning subtitles`);
+      await burnSubtitles({
+        videoPath: muxOutput,
+        subtitlesPath: resolvePath(args.burnSubtitles),
+        outputPath,
+        ffmpegBinary: args.ffmpeg,
+        ...(args.subtitleStyle ? { style: args.subtitleStyle } : {}),
+      });
+      await unlink(muxOutput).catch(() => undefined);
     }
 
     console.error(

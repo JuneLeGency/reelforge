@@ -17,10 +17,19 @@ Requires `ELEVENLABS_API_KEY` in your environment (get one at <https://elevenlab
 ```bash
 export ELEVENLABS_API_KEY=...
 bun packages/cli/src/bin.ts generate examples/narration-demo/config.json \
-  -o out/narration.mp4 \
-  --srt out/narration.srt
-open out/narration.mp4
+  -o out/narration.mp4
+# → out/narration.mp4  (silent-free — images timed to sentences, narration baked in)
+# → out/narration.srt  (sentence-level captions, always written)
 ```
+
+A sentence-level `.srt` is written next to every `.mp4`. Play it back with any subtitle-capable player (VLC, QuickTime with a matching `.srt` in the same folder, browser-embedded players, …). To **burn** captions into the video itself:
+
+```bash
+bun packages/cli/src/bin.ts generate examples/narration-demo/config.json \
+  -o out/narration.mp4 --burn
+```
+
+Burning uses ffmpeg's `subtitles` filter (libass). Most Linux `apt` builds and Windows `winget` builds include libass; the stock **macOS Homebrew `ffmpeg` does not** — install via `brew install ffmpeg --with-libass` (formula fork) or use a pre-built binary like the [one from BtbN](https://github.com/BtbN/FFmpeg-Builds).
 
 ## How alignment works
 

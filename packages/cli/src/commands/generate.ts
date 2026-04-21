@@ -1,11 +1,11 @@
-import { copyFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve as resolvePath } from 'node:path';
 import { defineCommand } from 'citty';
-import type { WordTiming } from '@reelforge/captions';
+import type { Caption, WordTiming } from '@reelforge/captions';
 import { captionsToSrt, wordTimingsToCaptions } from '@reelforge/captions';
 import { compileHtmlFile } from '@reelforge/html';
 import { renderChrome } from '@reelforge/engine-chrome';
-import { muxAudio } from '@reelforge/mux';
+import { burnSubtitles, muxAudio } from '@reelforge/mux';
 import { createElevenLabsProvider } from '@reelforge/providers-tts-elevenlabs';
 import { resolveChrome } from '../util/chrome';
 
@@ -130,6 +130,21 @@ export interface BuildHtmlOptions {
   title?: string;
 }
 
+/**
+ * Turn sentence boundaries into one {@link Caption} per sentence — suitable
+ * for burning into video as readable subtitles. For word-level captions use
+ * {@link wordTimingsToCaptions} on the raw TTS wordTimings instead.
+ */
+export function sentenceCaptions(sentences: readonly Sentence[]): Caption[] {
+  return sentences.map((s) => ({
+    text: s.text,
+    startMs: s.startMs,
+    endMs: s.endMs,
+    timestampMs: null,
+    confidence: null,
+  }));
+}
+
 export function buildGenerateHtml(opts: BuildHtmlOptions): string {
   const { width, height, fps, slides, audioRelative, audioDurationMs } = opts;
   const title = opts.title ?? 'Reelforge generated video';
@@ -222,7 +237,16 @@ export const generateCommand = defineCommand({
     },
     srt: {
       type: 'string',
-      description: 'Also write a word-level SRT file',
+      description: 'Also write a word-level SRT file (sentence-level SRT is always written next to the MP4)',
+    },
+    burn: {
+      type: 'boolean',
+      description: 'Burn the sentence-level SRT into the video (requires ffmpeg with libass)',
+      default: false,
+    },
+    subtitleStyle: {
+      type: 'string',
+      description: 'libass style override for burnt subtitles',
     },
     keepWorkdir: {
       type: 'boolean',
@@ -320,13 +344,30 @@ export const generateCommand = defineCommand({
     process.stderr.write('\n');
 
     console.error(`→ muxing audio`);
+    const sentenceSrtPath = outputPath.replace(/\.mp4$/i, '.srt');
+    const sentenceSrtBody = captionsToSrt(sentenceCaptions(sentences));
+    await writeFile(sentenceSrtPath, sentenceSrtBody, 'utf8');
+
+    const muxOutput = args.burn ? join(workdir, 'muxed.mp4') : outputPath;
     await muxAudio({
       silentVideoPath: silentPath,
-      outputPath,
+      outputPath: muxOutput,
       project: compiled.project,
       baseDir: compiled.baseDir,
       ffmpegBinary: args.ffmpeg,
     });
+
+    if (args.burn) {
+      console.error(`→ burning subtitles`);
+      await burnSubtitles({
+        videoPath: muxOutput,
+        subtitlesPath: sentenceSrtPath,
+        outputPath,
+        ffmpegBinary: args.ffmpeg,
+        ...(args.subtitleStyle ? { style: args.subtitleStyle } : {}),
+      });
+      await unlink(muxOutput).catch(() => undefined);
+    }
 
     if (args.srt) {
       const captions = wordTimingsToCaptions(result.wordTimings);
@@ -340,6 +381,7 @@ export const generateCommand = defineCommand({
       console.error(`  workdir kept: ${workdir}`);
     }
 
+    console.error(`✓ ${sentenceSrtPath}`);
     console.error(`✓ ${outputPath}`);
   },
 });

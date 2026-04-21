@@ -5,6 +5,7 @@ import {
   assignSlides,
   buildGenerateHtml,
   parseGenerateConfig,
+  sentenceCaptions,
   splitSentences,
 } from '../commands/generate';
 
@@ -122,6 +123,19 @@ describe('assignSlides', () => {
   test('empty inputs → empty output', () => {
     expect(assignSlides([], ['a'])).toEqual([]);
     expect(assignSlides([s(0, 1000)], [])).toEqual([]);
+  });
+});
+
+describe('sentenceCaptions', () => {
+  test('wraps sentences into Caption[] with timestampMs/confidence null', () => {
+    const caps = sentenceCaptions([
+      { text: 'Hi.', startMs: 0, endMs: 1000 },
+      { text: 'You?', startMs: 1100, endMs: 2000 },
+    ]);
+    expect(caps).toEqual([
+      { text: 'Hi.', startMs: 0, endMs: 1000, timestampMs: null, confidence: null },
+      { text: 'You?', startMs: 1100, endMs: 2000, timestampMs: null, confidence: null },
+    ]);
   });
 });
 
