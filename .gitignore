@@ -45,6 +45,9 @@ Thumbs.db
 
 # Stray files from shell commands accidentally redirecting to "-" as a path
 /-
+
+# DSL-generated HTML (regenerated on every render)
+**/__reelforge-dsl-*.html
 !docs/**/*.mp4
 !docs/**/*.webm
 

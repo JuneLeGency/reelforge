@@ -1,0 +1,29 @@
+{
+  config: { width: 1280, height: 720, fps: 30 },
+  clips: [
+    {
+      duration: 2,
+      layers: [
+        { type: 'image', src: './slide-a.svg', fit: 'cover' },
+        {
+          type: 'title',
+          text: 'Reelforge DSL',
+          style: { color: '#fff', fontSize: 108, position: 'center' },
+          entrance: 'slide-up',
+        },
+      ],
+    },
+    {
+      duration: 2,
+      layers: [
+        { type: 'image', src: './slide-b.svg', fit: 'cover' },
+        {
+          type: 'title',
+          text: 'One JSON → one video',
+          style: { color: '#fff', fontSize: 72, position: 'bottom' },
+          entrance: 'fade',
+        },
+      ],
+    },
+  ],
+}

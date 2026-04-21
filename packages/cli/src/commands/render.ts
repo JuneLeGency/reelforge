@@ -1,6 +1,7 @@
 import { unlink } from 'node:fs/promises';
-import { dirname, join, resolve as resolvePath } from 'node:path';
+import { dirname, extname, join, resolve as resolvePath } from 'node:path';
 import { defineCommand } from 'citty';
+import { compileDslFile } from '@reelforge/dsl';
 import { compileHtmlFile } from '@reelforge/html';
 import { renderChrome } from '@reelforge/engine-chrome';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
@@ -14,7 +15,7 @@ export const renderCommand = defineCommand({
   args: {
     input: {
       type: 'positional',
-      description: 'HTML composition file',
+      description: 'HTML (.html) or DSL (.json / .json5) composition file',
       required: true,
     },
     output: {
@@ -60,9 +61,13 @@ export const renderCommand = defineCommand({
     const silentPath = join(dirname(outputPath), `__silent_${Date.now()}.mp4`);
 
     console.error(`→ compiling ${args.input}`);
-    const compiled = await compileHtmlFile(args.input);
+    const ext = extname(args.input).toLowerCase();
+    const compiled =
+      ext === '.json' || ext === '.json5'
+        ? await compileDslFile(args.input)
+        : await compileHtmlFile(args.input);
     if (!compiled.htmlPath) {
-      console.error('compileHtmlFile did not return an htmlPath');
+      console.error('compile did not return an htmlPath');
       process.exit(3);
     }
 

@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@reelforge/captions": "workspace:*",
+    "@reelforge/dsl": "workspace:*",
     "@reelforge/engine-chrome": "workspace:*",
     "@reelforge/html": "workspace:*",
     "@reelforge/ir": "workspace:*",

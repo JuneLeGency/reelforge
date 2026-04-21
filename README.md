@@ -74,12 +74,13 @@ Full detail in [DESIGN.md](./DESIGN.md).
 | [`@reelforge/ir`](./packages/ir) | TypeScript types + Zod schema for `VideoProject` (the IR everyone compiles to) |
 | [`@reelforge/captions`](./packages/captions) | Word-timings → captions, TikTok-style pagination, SRT round-trip |
 | [`@reelforge/html`](./packages/html) | HTML frontend — compile `data-*`-annotated HTML into IR |
+| [`@reelforge/dsl`](./packages/dsl) | JSON5 DSL frontend — editly-style clip/layer config → HTML → IR |
 | [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI), image2pipe → ffmpeg |
 | [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video (`atrim` + `adelay` + `amix`) |
 | [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
 | [`@reelforge/cli`](./packages/cli) | `reelforge render` / `reelforge tts` command line |
 
-**128 tests across 7 packages, all green.**
+**147 tests across 8 packages, all green.**
 
 ## Design principles
 

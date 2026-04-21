@@ -1,8 +1,8 @@
 import { copyFile, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, extname, join, resolve as resolvePath } from 'node:path';
 import { defineCommand } from 'citty';
-import type { Caption, WordTiming } from '@reelforge/captions';
-import { captionsToSrt, wordTimingsToCaptions } from '@reelforge/captions';
+import type { Caption, TikTokPage, WordTiming } from '@reelforge/captions';
+import { captionsToSrt, createTikTokStyleCaptions, wordTimingsToCaptions } from '@reelforge/captions';
 import { compileHtmlFile } from '@reelforge/html';
 import { renderChrome } from '@reelforge/engine-chrome';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
@@ -129,6 +129,12 @@ export interface CaptionOverlayStyle {
   borderRadius?: string;
   marginBottomPct?: number; // 0..50
   maxWidthPct?: number; // 0..100
+  /** Highlight colour for the currently-spoken word in TikTok mode. */
+  tokenHighlightColor?: string;
+  /** Colour for words already spoken. */
+  tokenPastColor?: string;
+  /** Colour for upcoming words / the base page colour. */
+  tokenBaseColor?: string;
 }
 
 export interface BuildHtmlOptions {
@@ -139,8 +145,10 @@ export interface BuildHtmlOptions {
   audioRelative: string;
   audioDurationMs: number;
   title?: string;
-  /** When provided, each entry becomes a WAAPI-animated overlay div. */
+  /** Sentence-level captions rendered as WAAPI-animated overlay divs. */
   captions?: readonly Caption[];
+  /** TikTok-style pages with per-word color highlights. Takes priority over `captions`. */
+  tikTokPages?: readonly TikTokPage[];
   captionStyle?: CaptionOverlayStyle;
   /**
    * Total timeline duration for animation keyframe math. Defaults to
@@ -159,6 +167,9 @@ const DEFAULT_CAPTION_STYLE: Required<CaptionOverlayStyle> = {
   borderRadius: '12px',
   marginBottomPct: 8,
   maxWidthPct: 80,
+  tokenHighlightColor: '#ffe666',
+  tokenPastColor: 'rgba(255, 255, 255, 0.95)',
+  tokenBaseColor: 'rgba(255, 255, 255, 0.75)',
 };
 
 /**
@@ -181,6 +192,8 @@ export function buildGenerateHtml(opts: BuildHtmlOptions): string {
   const title = opts.title ?? 'Reelforge generated video';
   const totalMs = opts.totalDurationMs ?? audioDurationMs;
   const captions = opts.captions ?? [];
+  const tikTokPages = opts.tikTokPages ?? [];
+  const useTikTok = tikTokPages.length > 0;
   const style = { ...DEFAULT_CAPTION_STYLE, ...(opts.captionStyle ?? {}) };
 
   const imgTags = slides
@@ -191,38 +204,54 @@ export function buildGenerateHtml(opts: BuildHtmlOptions): string {
     })
     .join('\n');
 
-  const captionDivs = captions
-    .map(
-      (c, i) =>
-        `    <div class="caption" id="caption-${i}">${escapeText(c.text.trim())}</div>`,
-    )
-    .join('\n');
+  let overlayDivs = '';
+  let overlayScript = '';
 
-  const captionScript =
-    captions.length > 0
-      ? renderCaptionScript(captions, totalMs)
-      : '';
+  if (useTikTok) {
+    overlayDivs = renderTikTokDivs(tikTokPages);
+    overlayScript = renderTikTokScript(tikTokPages, totalMs, style);
+  } else if (captions.length > 0) {
+    overlayDivs = captions
+      .map(
+        (c, i) =>
+          `    <div class="caption" id="caption-${i}">${escapeText(c.text.trim())}</div>`,
+      )
+      .join('\n');
+    overlayScript = renderCaptionScript(captions, totalMs);
+  }
 
   const audioDurSec = (audioDurationMs / 1000).toFixed(3);
   const captionBottomVh = style.marginBottomPct;
   const captionMaxWidthVw = style.maxWidthPct;
 
-  return `<!DOCTYPE html>
-<html data-rf-width="${width}" data-rf-height="${height}" data-rf-fps="${fps}">
-<head>
-  <meta charset="utf-8">
-  <title>${escapeText(title)}</title>
-  <style>
-    html, body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: ${style.fontFamily}; }
-    #stage { position: relative; width: 100vw; height: 100vh; }
-    #stage img {
+  const tiktokCss = useTikTok
+    ? `
+    .tt-page {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      visibility: hidden;
+      left: 50%;
+      bottom: ${captionBottomVh}vh;
+      transform: translateX(-50%);
+      max-width: ${captionMaxWidthVw}vw;
+      text-align: center;
+      font-size: ${style.fontSize + 8}px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: ${style.tokenBaseColor};
+      text-shadow: 0 3px 16px rgba(0,0,0,0.6);
+      letter-spacing: -0.5px;
+      opacity: 0;
+      pointer-events: none;
+      white-space: pre-wrap;
     }
+    .tt-token {
+      display: inline-block;
+      color: ${style.tokenBaseColor};
+      transition: none;
+    }`
+    : '';
+
+  const sentenceCss = !useTikTok && captions.length > 0
+    ? `
     .caption {
       position: absolute;
       left: 50%;
@@ -240,18 +269,123 @@ export function buildGenerateHtml(opts: BuildHtmlOptions): string {
       opacity: 0;
       pointer-events: none;
       white-space: pre-wrap;
-    }
+    }`
+    : '';
+
+  return `<!DOCTYPE html>
+<html data-rf-width="${width}" data-rf-height="${height}" data-rf-fps="${fps}">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeText(title)}</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: ${style.fontFamily}; }
+    #stage { position: relative; width: 100vw; height: 100vh; }
+    #stage img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      visibility: hidden;
+    }${sentenceCss}${tiktokCss}
   </style>
 </head>
 <body>
   <div id="stage">
 ${imgTags}
-${captionDivs}
+${overlayDivs}
     <audio src="${escapeAttr(audioRelative)}" data-start="0" data-duration="${audioDurSec}"></audio>
-  </div>${captionScript}
+  </div>${overlayScript}
 </body>
 </html>
 `;
+}
+
+function renderTikTokDivs(pages: readonly TikTokPage[]): string {
+  const lines: string[] = [];
+  for (let p = 0; p < pages.length; p++) {
+    const page = pages[p]!;
+    lines.push(`    <div class="tt-page" id="tt-page-${p}">`);
+    for (let t = 0; t < page.tokens.length; t++) {
+      const tok = page.tokens[t]!;
+      lines.push(
+        `      <span class="tt-token" id="tt-token-${p}-${t}">${escapeText(tok.text)}</span>`,
+      );
+    }
+    lines.push(`    </div>`);
+  }
+  return lines.join('\n');
+}
+
+function renderTikTokScript(
+  pages: readonly TikTokPage[],
+  totalMs: number,
+  style: Required<CaptionOverlayStyle>,
+): string {
+  const total = Math.max(1, Math.round(totalMs));
+  const edge = 16;
+  const pageEntries: string[] = [];
+  const tokenEntries: string[] = [];
+  for (let p = 0; p < pages.length; p++) {
+    const page = pages[p]!;
+    const startMs = Math.round(page.startMs);
+    const endMs = Math.round(page.startMs + page.durationMs);
+    pageEntries.push(`    {i:${p},s:${startMs},e:${endMs}}`);
+    for (let t = 0; t < page.tokens.length; t++) {
+      const tok = page.tokens[t]!;
+      tokenEntries.push(
+        `    {p:${p},t:${t},s:${Math.round(tok.fromMs)},e:${Math.round(tok.toMs)}}`,
+      );
+    }
+  }
+  return `
+  <script>
+    (function () {
+      var total = ${total};
+      var edge = ${edge};
+      var baseColor = ${JSON.stringify(style.tokenBaseColor)};
+      var hiColor = ${JSON.stringify(style.tokenHighlightColor)};
+      var pastColor = ${JSON.stringify(style.tokenPastColor)};
+      var pages = [
+${pageEntries.join(',\n')}
+      ];
+      var tokens = [
+${tokenEntries.join(',\n')}
+      ];
+      pages.forEach(function (pg) {
+        var el = document.getElementById('tt-page-' + pg.i);
+        if (!el) return;
+        var pre = Math.max(0, (pg.s - edge) / total);
+        var on = pg.s / total;
+        var off = Math.min(1, pg.e / total);
+        var postOff = Math.min(1, (pg.e + edge) / total);
+        el.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: pre },
+          { opacity: 1, offset: on },
+          { opacity: 1, offset: off },
+          { opacity: 0, offset: postOff },
+          { opacity: 0, offset: 1 }
+        ], { duration: total, fill: 'both', easing: 'linear' });
+      });
+      tokens.forEach(function (tk) {
+        var el = document.getElementById('tt-token-' + tk.p + '-' + tk.t);
+        if (!el) return;
+        var preOn = Math.max(0, (tk.s - 1) / total);
+        var on = tk.s / total;
+        var off = tk.e / total;
+        var postOff = Math.min(1, (tk.e + 1) / total);
+        el.animate([
+          { color: baseColor, offset: 0 },
+          { color: baseColor, offset: preOn },
+          { color: hiColor, offset: on },
+          { color: hiColor, offset: off },
+          { color: pastColor, offset: postOff },
+          { color: pastColor, offset: 1 }
+        ], { duration: total, fill: 'both', easing: 'linear' });
+      });
+    })();
+  </script>`;
 }
 
 function renderCaptionScript(captions: readonly Caption[], totalMs: number): string {
@@ -262,7 +396,7 @@ function renderCaptionScript(captions: readonly Caption[], totalMs: number): str
     )
     .join(',\n');
   const total = Math.max(1, Math.round(totalMs));
-  const edge = 16; // ms — shorter than one frame at 60 fps, to snap opacity changes.
+  const edge = 16;
   return `
   <script>
     (function () {
@@ -347,6 +481,16 @@ export const generateCommand = defineCommand({
       description: 'Do not inject a DOM caption overlay into the generated HTML',
       default: false,
     },
+    tiktokCaptions: {
+      type: 'boolean',
+      description: 'Use TikTok-style paged captions with per-word color highlight (instead of sentence-level)',
+      default: false,
+    },
+    tiktokThreshold: {
+      type: 'string',
+      description: 'Milliseconds threshold for grouping words into a TikTok page (default 1200)',
+      default: '1200',
+    },
     burn: {
       type: 'boolean',
       description: 'Also burn the sentence-level SRT into the video via ffmpeg (requires ffmpeg with libass). DOM captions are the recommended path — this flag is for users who need an additional ffmpeg-burnt layer.',
@@ -418,6 +562,17 @@ export const generateCommand = defineCommand({
     await writeFile(audioPath, result.audio);
 
     const sentenceCaps = sentenceCaptions(sentences);
+    let tiktokPages: TikTokPage[] | undefined;
+    if (!args.noCaptions && args.tiktokCaptions) {
+      const wordCaps = wordTimingsToCaptions(result.wordTimings);
+      const thresholdMs = Number.parseInt(args.tiktokThreshold, 10);
+      const { pages } = createTikTokStyleCaptions({
+        captions: wordCaps,
+        combineTokensWithinMs: Number.isFinite(thresholdMs) ? thresholdMs : 1200,
+      });
+      tiktokPages = pages;
+    }
+
     const htmlPath = join(workdir, 'index.html');
     await writeFile(
       htmlPath,
@@ -428,7 +583,11 @@ export const generateCommand = defineCommand({
         slides,
         audioRelative: 'narration.mp3',
         audioDurationMs: result.durationMs,
-        ...(args.noCaptions ? {} : { captions: sentenceCaps }),
+        ...(args.noCaptions
+          ? {}
+          : tiktokPages
+            ? { tikTokPages: tiktokPages }
+            : { captions: sentenceCaps }),
       }),
     );
 

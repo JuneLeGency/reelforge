@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html data-rf-width="1080" data-rf-height="1920" data-rf-fps="30" data-rf-duration="4">
+<head>
+  <meta charset="utf-8">
+  <title>TikTok-style captions demo</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(ellipse at 50% 0%, #1e3c72 0%, #0a1a2f 60%, #000 100%);
+    }
+    .watermark {
+      position: absolute;
+      top: 5vh;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.5);
+      font-size: 24px;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+    }
+    .tt-page {
+      position: absolute;
+      left: 50%;
+      bottom: 15vh;
+      transform: translateX(-50%);
+      max-width: 90vw;
+      text-align: center;
+      font-size: 88px;
+      font-weight: 900;
+      line-height: 1.15;
+      color: rgba(255,255,255,0.75);
+      text-shadow: 0 4px 18px rgba(0,0,0,0.75);
+      letter-spacing: -1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .tt-token {
+      display: inline-block;
+      color: rgba(255,255,255,0.75);
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div class="watermark">reelforge</div>
+    <div class="tt-page" id="tt-page-0">
+      <span class="tt-token" id="tt-token-0-0">Reel</span><span class="tt-token" id="tt-token-0-1"> forge</span><span class="tt-token" id="tt-token-0-2"> is</span><span class="tt-token" id="tt-token-0-3"> fast</span>
+    </div>
+    <div class="tt-page" id="tt-page-1">
+      <span class="tt-token" id="tt-token-1-0">Built</span><span class="tt-token" id="tt-token-1-1"> for</span><span class="tt-token" id="tt-token-1-2"> AI</span><span class="tt-token" id="tt-token-1-3"> agents</span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var total = 4000;
+      var edge = 16;
+      var baseColor = 'rgba(255,255,255,0.75)';
+      var hiColor = '#ffe666';
+      var pastColor = 'rgba(255,255,255,0.95)';
+      var pages = [
+        { i: 0, s: 0,    e: 2000 },
+        { i: 1, s: 2000, e: 4000 }
+      ];
+      var tokens = [
+        { p: 0, t: 0, s: 0,    e: 400 },
+        { p: 0, t: 1, s: 400,  e: 1000 },
+        { p: 0, t: 2, s: 1000, e: 1500 },
+        { p: 0, t: 3, s: 1500, e: 2000 },
+        { p: 1, t: 0, s: 2000, e: 2500 },
+        { p: 1, t: 1, s: 2500, e: 2900 },
+        { p: 1, t: 2, s: 2900, e: 3400 },
+        { p: 1, t: 3, s: 3400, e: 4000 }
+      ];
+      pages.forEach(function (pg) {
+        var el = document.getElementById('tt-page-' + pg.i);
+        if (!el) return;
+        var pre = Math.max(0, (pg.s - edge) / total);
+        var on = pg.s / total;
+        var off = Math.min(1, pg.e / total);
+        var postOff = Math.min(1, (pg.e + edge) / total);
+        el.animate([
+          { opacity: 0, offset: 0 },
+          { opacity: 0, offset: pre },
+          { opacity: 1, offset: on },
+          { opacity: 1, offset: off },
+          { opacity: 0, offset: postOff },
+          { opacity: 0, offset: 1 }
+        ], { duration: total, fill: 'both', easing: 'linear' });
+      });
+      tokens.forEach(function (tk) {
+        var el = document.getElementById('tt-token-' + tk.p + '-' + tk.t);
+        if (!el) return;
+        var preOn = Math.max(0, (tk.s - 1) / total);
+        var on = tk.s / total;
+        var off = tk.e / total;
+        var postOff = Math.min(1, (tk.e + 1) / total);
+        el.animate([
+          { color: baseColor, offset: 0 },
+          { color: baseColor, offset: preOn },
+          { color: hiColor, offset: on },
+          { color: hiColor, offset: off },
+          { color: pastColor, offset: postOff },
+          { color: pastColor, offset: 1 }
+        ], { duration: total, fill: 'both', easing: 'linear' });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -258,6 +258,78 @@ describe('buildGenerateHtml', () => {
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
   });
 
+  test('tikTokPages produces per-token spans with color animations', () => {
+    const html = buildGenerateHtml({
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      slides: [{ image: 'x.png', startMs: 0, durationMs: 3000 }],
+      audioRelative: 'n.mp3',
+      audioDurationMs: 3000,
+      tikTokPages: [
+        {
+          text: 'Hello world',
+          startMs: 0,
+          durationMs: 1500,
+          tokens: [
+            { text: 'Hello', fromMs: 0, toMs: 500 },
+            { text: ' world', fromMs: 500, toMs: 1500 },
+          ],
+        },
+        {
+          text: 'Second page',
+          startMs: 1500,
+          durationMs: 1500,
+          tokens: [
+            { text: 'Second', fromMs: 1500, toMs: 2200 },
+            { text: ' page', fromMs: 2200, toMs: 3000 },
+          ],
+        },
+      ],
+    });
+    expect(html).toContain('class="tt-page" id="tt-page-0"');
+    expect(html).toContain('class="tt-token" id="tt-token-0-0"');
+    expect(html).toContain('>Hello<');
+    expect(html).toContain('class="tt-token" id="tt-token-1-1"');
+    expect(html).toContain('> page<');
+    expect(html).toContain('.tt-page {');
+    expect(html).toContain('.tt-token {');
+    expect(html).toContain('hiColor');
+    expect(html).toContain('pastColor');
+    expect(html).toContain('baseColor');
+  });
+
+  test('tikTokPages takes priority over sentence captions', () => {
+    const html = buildGenerateHtml({
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      slides: [{ image: 'x.png', startMs: 0, durationMs: 1000 }],
+      audioRelative: 'n.mp3',
+      audioDurationMs: 1000,
+      captions: [
+        {
+          text: 'Should-be-ignored',
+          startMs: 0,
+          endMs: 1000,
+          timestampMs: null,
+          confidence: null,
+        },
+      ],
+      tikTokPages: [
+        {
+          text: 'TT',
+          startMs: 0,
+          durationMs: 1000,
+          tokens: [{ text: 'TT', fromMs: 0, toMs: 1000 }],
+        },
+      ],
+    });
+    expect(html).not.toContain('Should-be-ignored');
+    expect(html).toContain('>TT<');
+    expect(html).not.toContain('class="caption"');
+  });
+
   test('custom captionStyle overrides defaults', () => {
     const html = buildGenerateHtml({
       width: 1280,

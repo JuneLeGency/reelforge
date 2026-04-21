@@ -26,12 +26,22 @@
       },
       "dependencies": {
         "@reelforge/captions": "workspace:*",
+        "@reelforge/dsl": "workspace:*",
         "@reelforge/engine-chrome": "workspace:*",
         "@reelforge/html": "workspace:*",
         "@reelforge/ir": "workspace:*",
         "@reelforge/mux": "workspace:*",
         "@reelforge/providers-tts-elevenlabs": "workspace:*",
         "citty": "^0.1.6",
+      },
+    },
+    "packages/dsl": {
+      "name": "@reelforge/dsl",
+      "version": "0.0.0",
+      "dependencies": {
+        "@reelforge/html": "workspace:*",
+        "@reelforge/ir": "workspace:*",
+        "json5": "^2.2.3",
       },
     },
     "packages/engine-chrome": {
@@ -94,6 +104,8 @@
     "@reelforge/captions": ["@reelforge/captions@workspace:packages/captions"],
 
     "@reelforge/cli": ["@reelforge/cli@workspace:packages/cli"],
+
+    "@reelforge/dsl": ["@reelforge/dsl@workspace:packages/dsl"],
 
     "@reelforge/engine-chrome": ["@reelforge/engine-chrome@workspace:packages/engine-chrome"],
 
@@ -220,6 +232,8 @@
     "ip-address": ["ip-address@10.1.0", "https://mirrors.huaweicloud.com/repository/npm/ip-address/-/ip-address-10.1.0.tgz", {}, "sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q=="],
 
     "is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "https://mirrors.huaweicloud.com/repository/npm/is-fullwidth-code-point/-/is-fullwidth-code-point-3.0.0.tgz", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
+
+    "json5": ["json5@2.2.3", "https://mirrors.huaweicloud.com/repository/npm/json5/-/json5-2.2.3.tgz", { "bin": { "json5": "lib/cli.js" } }, "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg=="],
 
     "lru-cache": ["lru-cache@7.18.3", "https://mirrors.huaweicloud.com/repository/npm/lru-cache/-/lru-cache-7.18.3.tgz", {}, "sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA=="],
 
