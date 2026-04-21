@@ -1,6 +1,7 @@
 import { defineCommand } from 'citty';
 import { generateCommand } from './commands/generate';
 import { initCommand } from './commands/init';
+import { mcpCommand } from './commands/mcp';
 import { previewCommand } from './commands/preview';
 import { renderCommand } from './commands/render';
 import { ttsCommand } from './commands/tts';
@@ -17,12 +18,14 @@ export const main = defineCommand({
     render: renderCommand,
     tts: ttsCommand,
     generate: generateCommand,
+    mcp: mcpCommand,
   },
 });
 
 export {
   generateCommand,
   initCommand,
+  mcpCommand,
   previewCommand,
   renderCommand,
   ttsCommand,

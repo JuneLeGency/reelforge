@@ -37,7 +37,8 @@ Slide durations are aligned to sentence-level TTS word timings — no manual tim
 | `reelforge preview <html>` | Live-reloading HTML preview server (WebSocket hot-reload) |
 | `reelforge render <html> -o <mp4>` | Compile HTML → IR → rendered MP4 |
 | `reelforge tts "<text>" --voice <id> -o <mp3>` | Standalone narration synthesis (+ optional SRT) |
-| `reelforge generate <config.json> -o <mp4>` | Full script→slides→video pipeline |
+| `reelforge generate <config.json> -o <mp4>` | Full script→slides→video pipeline (add `--tiktok-captions` for per-word highlights) |
+| `reelforge mcp` | Start the MCP server on stdio for Claude Code / Cursor / Codex |
 
 ## Why another video framework?
 
@@ -75,12 +76,13 @@ Full detail in [DESIGN.md](./DESIGN.md).
 | [`@reelforge/captions`](./packages/captions) | Word-timings → captions, TikTok-style pagination, SRT round-trip |
 | [`@reelforge/html`](./packages/html) | HTML frontend — compile `data-*`-annotated HTML into IR |
 | [`@reelforge/dsl`](./packages/dsl) | JSON5 DSL frontend — editly-style clip/layer config → HTML → IR |
-| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI), image2pipe → ffmpeg |
-| [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video (`atrim` + `adelay` + `amix`) |
+| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI / image / video), image2pipe → ffmpeg, opt-in BeginFrame CDP path |
+| [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video (`atrim` + `adelay` + `amix`), optional libass subtitle burn |
 | [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
-| [`@reelforge/cli`](./packages/cli) | `reelforge render` / `reelforge tts` command line |
+| [`@reelforge/mcp`](./packages/mcp) | MCP server — exposes compile / introspect tools to AI agents over stdio |
+| [`@reelforge/cli`](./packages/cli) | `reelforge render` / `generate` / `preview` / `init` / `tts` / `mcp` |
 
-**147 tests across 8 packages, all green.**
+**167 tests across 9 packages, all green.**
 
 ## Design principles
 
@@ -93,10 +95,10 @@ Full detail in [DESIGN.md](./DESIGN.md).
 ## Status & Roadmap
 
 - ✅ **M0 — Architecture and skeleton** — IR contract, monorepo, toolchain, DESIGN.md
-- ✅ **M1 — End-to-end MVP** — HTML + Chrome engine + ElevenLabs TTS + mux + CLI. *HTML → MP4 pipeline works today; TTS + captions wired for manual pairing (auto-sync pipeline lands in M2).*
-- 🟡 **M2 — Multiple frontends + agent integration** — JSON5 DSL, Skills, MCP server, ScriptGenerator → one-command "sentence → video with synced captions"
-- 🔜 **M3 — Multiple backends** — FFmpeg fast path, Canvas + generators, parallel frame segments, BeginFrame CDP
-- 🔜 **M4 — Ecosystem** — cloud deploy templates, more TTS/STT/image providers, community skill marketplace
+- ✅ **M1 — End-to-end MVP** — HTML + Chrome engine + ElevenLabs TTS + mux + CLI
+- ✅ **M2 — Multiple frontends + agent integration** — JSON5 DSL, `generate` pipeline with TikTok-style word highlights, MCP server with 4 structured tools
+- 🟡 **M3 — Multiple backends** — ✅ BeginFrame CDP opt-in; 🔜 FFmpeg fast path, Canvas + generators, parallel frame segments
+- 🔜 **M4 — Ecosystem** — cloud deploy templates, more TTS/STT/image providers, Skills for agents, community marketplace
 
 Full roadmap in [DESIGN.md §11](./DESIGN.md#11-路线图).
 

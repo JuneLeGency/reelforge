@@ -46,6 +46,11 @@ export const renderCommand = defineCommand({
       type: 'string',
       description: 'libass style override (e.g. "FontSize=32,Alignment=2")',
     },
+    useBeginFrame: {
+      type: 'boolean',
+      description: 'Use HeadlessExperimental.beginFrame for deterministic atomic frame capture (Linux-optimised; disables <video> / <audio> playback)',
+      default: false,
+    },
   },
   async run({ args }) {
     const chromePath =
@@ -81,6 +86,7 @@ export const renderCommand = defineCommand({
       outputPath: silentPath,
       executablePath: chromePath,
       ffmpegBinary: args.ffmpeg,
+      useBeginFrame: args.useBeginFrame,
       onProgress: ({ frame, total }) => {
         if (frame % progressEvery === 0 || frame === total) {
           process.stderr.write(`\r  frame ${frame}/${total}`);
