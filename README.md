@@ -18,6 +18,27 @@ That renders a 3-second 1280×720 30 fps MP4 from an inline-SVG background + WAA
 
 **Requirements:** Node ≥ 22, `ffmpeg` on `PATH`, Google Chrome installed.
 
+### Going further: narration-driven generation
+
+With an `ELEVENLABS_API_KEY`, the pipeline can take a script + slides and produce a fully narrated video:
+
+```bash
+bun packages/cli/src/bin.ts generate examples/narration-demo/config.json \
+  -o out/narration.mp4 --srt out/narration.srt
+```
+
+Slide durations are aligned to sentence-level TTS word timings — no manual timing. See [`examples/narration-demo/`](./examples/narration-demo).
+
+### All CLI commands
+
+| Command | Purpose |
+|---|---|
+| `reelforge init <dir>` | Scaffold a new project from the hello-world template |
+| `reelforge preview <html>` | Live-reloading HTML preview server (WebSocket hot-reload) |
+| `reelforge render <html> -o <mp4>` | Compile HTML → IR → rendered MP4 |
+| `reelforge tts "<text>" --voice <id> -o <mp3>` | Standalone narration synthesis (+ optional SRT) |
+| `reelforge generate <config.json> -o <mp4>` | Full script→slides→video pipeline |
+
 ## Why another video framework?
 
 Existing tools each own one dimension:
@@ -58,7 +79,7 @@ Full detail in [DESIGN.md](./DESIGN.md).
 | [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
 | [`@reelforge/cli`](./packages/cli) | `reelforge render` / `reelforge tts` command line |
 
-**79 tests across 7 packages, all green.**
+**113 tests across 7 packages, all green.**
 
 ## Design principles
 

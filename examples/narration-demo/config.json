@@ -1,0 +1,12 @@
+{
+  "narration": "Reelforge is a universal programmatic video framework. It compiles HTML, JSON, or TypeScript into one intermediate representation. Any renderer can then produce the final video.",
+  "images": [
+    "./slide-1.svg",
+    "./slide-2.svg",
+    "./slide-3.svg"
+  ],
+  "voice": "Xb7hH8MSUJpSbSDYk0k2",
+  "width": 1280,
+  "height": 720,
+  "fps": 30
+}

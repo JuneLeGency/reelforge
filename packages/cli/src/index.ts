@@ -1,4 +1,5 @@
 import { defineCommand } from 'citty';
+import { generateCommand } from './commands/generate';
 import { initCommand } from './commands/init';
 import { previewCommand } from './commands/preview';
 import { renderCommand } from './commands/render';
@@ -15,10 +16,24 @@ export const main = defineCommand({
     preview: previewCommand,
     render: renderCommand,
     tts: ttsCommand,
+    generate: generateCommand,
   },
 });
 
-export { initCommand, previewCommand, renderCommand, ttsCommand };
+export {
+  generateCommand,
+  initCommand,
+  previewCommand,
+  renderCommand,
+  ttsCommand,
+};
+export {
+  buildGenerateHtml,
+  assignSlides,
+  splitSentences,
+  parseGenerateConfig,
+  GenerateConfigError,
+} from './commands/generate';
 export { scaffoldHello, ScaffoldError } from './commands/init';
 export {
   HOT_RELOAD_SNIPPET,

@@ -81,6 +81,46 @@ describe('RUNTIME_SCRIPT', () => {
     expect(bag.asyncDone).toBe(true);
   });
 
+  test('image adapter toggles visibility based on the active time window', () => {
+    const imgs = [
+      {
+        style: { visibility: '' },
+        getAttribute: (k: string) =>
+          (({ 'data-start': '0', 'data-duration': '2' }) as Record<string, string>)[k] ?? null,
+      },
+      {
+        style: { visibility: '' },
+        getAttribute: (k: string) =>
+          (({ 'data-start': '2', 'data-duration': '3' }) as Record<string, string>)[k] ?? null,
+      },
+    ];
+    const w: Record<string, unknown> = {};
+    const doc = {
+      readyState: 'complete',
+      getAnimations: undefined,
+      querySelectorAll: (sel: string) =>
+        sel === 'img[data-start][data-duration]' ? imgs : [],
+    };
+    const fn = new Function('window', 'document', 'console', 'addEventListener', RUNTIME_SCRIPT);
+    fn(w, doc, { warn: () => undefined }, () => undefined);
+    const rf = w.__rf as { seekFrame: (ms: number) => Promise<unknown> };
+
+    // t = 500ms → first image visible, second hidden.
+    rf.seekFrame(500);
+    expect(imgs[0]!.style.visibility).toBe('visible');
+    expect(imgs[1]!.style.visibility).toBe('hidden');
+
+    // t = 2500ms → swap.
+    rf.seekFrame(2500);
+    expect(imgs[0]!.style.visibility).toBe('hidden');
+    expect(imgs[1]!.style.visibility).toBe('visible');
+
+    // t = 6000ms → both past end.
+    rf.seekFrame(6000);
+    expect(imgs[0]!.style.visibility).toBe('hidden');
+    expect(imgs[1]!.style.visibility).toBe('hidden');
+  });
+
   test('registers a video adapter only when <video data-start> exists', () => {
     const fakeVideo = {
       currentTime: 0,

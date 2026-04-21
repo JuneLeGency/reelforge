@@ -70,6 +70,24 @@ export const RUNTIME_SCRIPT = String.raw`
     }
 
     if (typeof document !== 'undefined') {
+      var timedImages = Array.prototype.slice.call(
+        document.querySelectorAll('img[data-start][data-duration]')
+      );
+      if (timedImages.length > 0) {
+        window.__rf.registerAdapter({
+          name: 'image',
+          seek: function (ctx) {
+            for (var i = 0; i < timedImages.length; i++) {
+              var img = timedImages[i];
+              var startMs = parseFloat(img.getAttribute('data-start')) * 1000;
+              var durationMs = parseFloat(img.getAttribute('data-duration')) * 1000;
+              var active = ctx.timeMs >= startMs && ctx.timeMs < startMs + durationMs;
+              img.style.visibility = active ? 'visible' : 'hidden';
+            }
+          },
+        });
+      }
+
       var videos = Array.prototype.slice.call(
         document.querySelectorAll('video[data-start]')
       );
