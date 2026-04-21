@@ -25,6 +25,6 @@
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": false,
 
-    "composite": true
+    "noEmit": true
   }
 }

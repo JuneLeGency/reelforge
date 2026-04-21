@@ -7,7 +7,7 @@
   "type": "module",
   "workspaces": ["packages/*"],
   "scripts": {
-    "typecheck": "tsc -b",
+    "typecheck": "bun --filter '@reelforge/*' typecheck",
     "test": "bun --filter '@reelforge/*' test",
     "lint": "oxlint packages",
     "format": "oxfmt packages",
