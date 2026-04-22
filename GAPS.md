@@ -210,17 +210,14 @@ Reelforge 已有的**核心能力不比 Hyperframes 少**(甚至在 FFmpeg fast 
 - Anti-patterns 清单是关键 —— "这个风格不会做什么" 比"会做什么"更能锁定视觉一致性
 - **参考**: `ref/hyperframes/skills/hyperframes/visual-styles.md` (格式参考,内容完全原创)
 
-**[ ] #R3 6 个新 CSS overlay effects(1 天,chrome-effects 从 4 扩到 10)**
-- `rgb-split` — 多层 text-shadow + transform 错位做 chromatic aberration
-- `film-grain` — CSS `noise` background + mix-blend-mode overlay,opacity 脉冲
-- `scanlines` — repeating-linear-gradient + opacity sweep
-- `glitch-crack` — 短时 transform: skew + translate 抖动
-- `shake` — transform 快速随机 translate
-- `zoom-blur` — filter: blur() 瞬态抖动(作用于 #stage)
-- 加入 `@reelforge/transitions` CHROME_EFFECTS
-- 注意 zoom-blur 作用于 #stage 会模糊所有 slide,需要单独 selector 处理
-- **参考**: `ref/hyperframes/packages/shader-transitions/`、`ref/editly` Canvas 代码示例
-- **价值**: chrome effects 从 4 扩到 10,覆盖面追 Hyperframes 水平
+**[x] #R3 6 个新 CSS overlay effects** → 完成(chrome-effects 从 4 扩到 10)
+- `rgb-split` — 两层 mag/cy tint overlay + translateX 偏移 + screen blend,近似色差分离
+- `film-grain` — inline SVG feTurbulence 作 noise background-image,mix-blend-mode overlay
+- `scanlines` — repeating-linear-gradient 水平扫描线 + mix-blend-mode multiply
+- `glitch-crack` — 两条水平色带(magenta/cyan via ::before / ::after)+ steps easing flicker
+- `shake` — 作用于 `#stage` 的 translate 抖动,7 stops 回到 (0,0),captions 一起晃(刻意)
+- `zoom-blur` — 作用于 `#stage` 的 filter: blur(0→7px→0) + scale(1→1.06→1),captions 一起模糊(刻意)
+- 新增 12 个测试,transitions 包 42 pass
 
 **[ ] #R4 5 个企业模板(1 天,模板从 11 扩到 16)**
 - `testimonial` — 半身像 + 语录 + 姓名/title;图右文左,引号装饰

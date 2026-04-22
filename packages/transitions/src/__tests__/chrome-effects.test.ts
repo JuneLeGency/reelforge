@@ -6,9 +6,20 @@ import {
 } from '../chrome-effects';
 
 describe('CHROME_EFFECTS registry', () => {
-  test('exposes the starter set', () => {
+  test('exposes the full effect catalog', () => {
     const names = listChromeEffects().sort();
-    expect(names).toEqual(['flash-black', 'flash-white', 'radial-pulse', 'wipe-sweep']);
+    expect(names).toEqual([
+      'film-grain',
+      'flash-black',
+      'flash-white',
+      'glitch-crack',
+      'radial-pulse',
+      'rgb-split',
+      'scanlines',
+      'shake',
+      'wipe-sweep',
+      'zoom-blur',
+    ]);
   });
 
   test('each effect has the required shape', () => {
@@ -102,6 +113,123 @@ describe('radial-pulse effect', () => {
     expect(peak!.props.transform).toBe('scale(1)');
     expect(kfs[0]!.props.transform).toBe('scale(0.4)');
     expect(kfs.at(-1)!.props.transform).toBe('scale(1.4)');
+  });
+});
+
+describe('rgb-split effect', () => {
+  const fx = CHROME_EFFECTS['rgb-split']!;
+
+  test('emits two tinted layers (mag + cy) that peak at atMs', () => {
+    const out = fx.emit({ id: 't0', atMs: 2000, durationMs: 500, totalDurationMs: 8000 });
+    expect(out.html).toContain('rgb-layer mag');
+    expect(out.html).toContain('rgb-layer cy');
+    expect(out.animations).toHaveLength(2);
+    for (const anim of out.animations) {
+      const peak = anim.keyframes.find((kf) => kf.props.opacity === 1);
+      expect(peak).toBeDefined();
+      expect(peak!.atMs).toBe(2000);
+    }
+  });
+
+  test('mag layer offsets negative X; cy layer offsets positive X', () => {
+    const out = fx.emit({ id: 't0', atMs: 1000, durationMs: 400, totalDurationMs: 5000 });
+    const mag = out.animations.find((a) => a.selector.includes('.mag'))!;
+    const cy = out.animations.find((a) => a.selector.includes('.cy'))!;
+    expect((mag.keyframes[0]!.props.transform as string)).toContain('translateX(-');
+    expect((cy.keyframes[0]!.props.transform as string)).toMatch(/translateX\(\d/);
+  });
+});
+
+describe('film-grain effect', () => {
+  const fx = CHROME_EFFECTS['film-grain']!;
+
+  test('uses an inline SVG noise background image', () => {
+    expect(fx.css).toContain('data:image/svg+xml');
+    expect(fx.css).toContain('feTurbulence');
+  });
+
+  test('emits a single overlay that pulses opacity', () => {
+    const out = fx.emit({ id: 't0', atMs: 1500, durationMs: 400, totalDurationMs: 5000 });
+    expect(out.html).toContain('rf-fx-film-grain');
+    expect(out.animations).toHaveLength(1);
+    const peak = out.animations[0]!.keyframes.find((kf) => kf.props.opacity === 1);
+    expect(peak).toBeDefined();
+    expect(peak!.atMs).toBe(1500);
+  });
+});
+
+describe('scanlines effect', () => {
+  const fx = CHROME_EFFECTS['scanlines']!;
+
+  test('uses repeating-linear-gradient for the scan line pattern', () => {
+    expect(fx.css).toContain('repeating-linear-gradient');
+    expect(fx.css).toContain('mix-blend-mode: multiply');
+  });
+
+  test('peaks at atMs', () => {
+    const out = fx.emit({ id: 't0', atMs: 3000, durationMs: 600, totalDurationMs: 9000 });
+    const peak = out.animations[0]!.keyframes.find((kf) => kf.props.opacity === 1);
+    expect(peak!.atMs).toBe(3000);
+  });
+});
+
+describe('glitch-crack effect', () => {
+  const fx = CHROME_EFFECTS['glitch-crack']!;
+
+  test('uses ::before + ::after for the two colour bands', () => {
+    expect(fx.css).toContain('::before');
+    expect(fx.css).toContain('::after');
+  });
+
+  test('uses stepped easing for a flicker feel', () => {
+    const out = fx.emit({ id: 't0', atMs: 1200, durationMs: 300, totalDurationMs: 5000 });
+    expect(out.animations[0]!.easing).toMatch(/steps/);
+  });
+});
+
+describe('shake effect', () => {
+  const fx = CHROME_EFFECTS['shake']!;
+
+  test('targets #stage (not an overlay) and emits empty HTML', () => {
+    const out = fx.emit({ id: 't0', atMs: 2000, durationMs: 400, totalDurationMs: 6000 });
+    expect(out.html).toBe('');
+    expect(out.animations).toHaveLength(1);
+    expect(out.animations[0]!.selector).toBe('#stage');
+  });
+
+  test('keyframes start and end at translate(0,0) so the stage settles', () => {
+    const out = fx.emit({ id: 't0', atMs: 2500, durationMs: 500, totalDurationMs: 8000 });
+    const kfs = out.animations[0]!.keyframes;
+    expect(kfs[0]!.props.transform).toBe('translate(0px, 0px)');
+    expect(kfs.at(-1)!.props.transform).toBe('translate(0px, 0px)');
+    // At least one intermediate frame has a non-zero offset.
+    const hasOffset = kfs.some(
+      (kf) => typeof kf.props.transform === 'string' && kf.props.transform !== 'translate(0px, 0px)',
+    );
+    expect(hasOffset).toBe(true);
+  });
+});
+
+describe('zoom-blur effect', () => {
+  const fx = CHROME_EFFECTS['zoom-blur']!;
+
+  test('targets #stage; peak frame has filter: blur + scale up', () => {
+    const out = fx.emit({ id: 't0', atMs: 1800, durationMs: 300, totalDurationMs: 6000 });
+    expect(out.html).toBe('');
+    expect(out.animations[0]!.selector).toBe('#stage');
+    const peak = out.animations[0]!.keyframes.find(
+      (kf) =>
+        typeof kf.props.filter === 'string' && (kf.props.filter as string).includes('blur(7px)'),
+    );
+    expect(peak).toBeDefined();
+    expect((peak!.props.transform as string)).toBe('scale(1.06)');
+  });
+
+  test('returns to blur(0) scale(1) after the peak', () => {
+    const out = fx.emit({ id: 't0', atMs: 2000, durationMs: 300, totalDurationMs: 6000 });
+    const last = out.animations[0]!.keyframes.at(-1)!;
+    expect(last.props.filter).toBe('blur(0px)');
+    expect(last.props.transform).toBe('scale(1)');
   });
 });
 
