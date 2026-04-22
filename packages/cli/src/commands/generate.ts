@@ -56,6 +56,14 @@ export interface SlideContent {
   transition?: string | undefined;
   /** Transition duration in ms. Default 400. */
   transitionDurationMs?: number | undefined;
+  /**
+   * Free-form extras passed through to the template. Used by templates
+   * that need per-slide data beyond the standard slots — e.g.
+   * split-compare reads leftTitle / leftBody / rightTitle / rightBody,
+   * end-card reads icons / actions, photo-card reads eyebrow, etc.
+   * Values must be string or number (JSON-safe).
+   */
+  extras?: Readonly<Record<string, string | number | undefined>> | undefined;
 }
 
 export interface GenerateConfig {
@@ -138,6 +146,22 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
         throw new GenerateConfigError(
           `config.slides[${i}].transitionDurationMs must be a finite number`,
         );
+      }
+      if (s.extras !== undefined) {
+        if (typeof s.extras !== 'object' || s.extras === null || Array.isArray(s.extras)) {
+          throw new GenerateConfigError(`config.slides[${i}].extras must be an object`);
+        }
+        for (const [ek, ev] of Object.entries(s.extras)) {
+          if (
+            ev !== undefined &&
+            typeof ev !== 'string' &&
+            typeof ev !== 'number'
+          ) {
+            throw new GenerateConfigError(
+              `config.slides[${i}].extras.${ek} must be a string or number`,
+            );
+          }
+        }
       }
     }
   }
@@ -856,6 +880,7 @@ export const generateCommand = defineCommand({
         bullets?: readonly string[];
         transition?: string;
         transitionDurationMs?: number;
+        extras?: Record<string, string | number | undefined>;
       }> = [];
 
       if (config.slides && config.slides.length > 0) {
@@ -890,6 +915,9 @@ export const generateCommand = defineCommand({
             ...(s.transitionDurationMs !== undefined
               ? { transitionDurationMs: s.transitionDurationMs }
               : {}),
+            ...(s.extras !== undefined
+              ? { extras: { ...s.extras } as Record<string, string | number | undefined> }
+              : {}),
           });
         }
       } else if (config.images && config.images.length > 0 && globalTemplate) {
@@ -913,6 +941,7 @@ export const generateCommand = defineCommand({
           ...(content.subtitle !== undefined ? { subtitle: content.subtitle } : {}),
           ...(content.image !== undefined ? { image: content.image } : {}),
           ...(content.bullets !== undefined ? { bullets: content.bullets } : {}),
+          ...(content.extras !== undefined ? { extras: content.extras } : {}),
         };
       });
       slidesCount = templated.length;

@@ -1,6 +1,6 @@
 {
   "silence_ms": 600,
-  "total_ms": 36440,
+  "total_ms": 38160,
   "slides": [
     {
       "i": 0,
@@ -12,55 +12,61 @@
       "i": 1,
       "line": "十三个包,十六个模板,十个特效。",
       "startMs": 4920,
-      "endMs": 9860
+      "endMs": 8580
     },
     {
       "i": 2,
       "line": "开箱即用,从配置到视频一条命令。",
-      "startMs": 9360,
-      "endMs": 13980
+      "startMs": 8080,
+      "endMs": 12860
     },
     {
       "i": 3,
       "line": "核心流程,四步贯通。",
-      "startMs": 13480,
-      "endMs": 18900
+      "startMs": 12360,
+      "endMs": 18100
     },
     {
       "i": 4,
-      "line": "测试覆盖,全线通过。",
-      "startMs": 18400,
-      "endMs": 23820
+      "line": "对比手写,更短更清晰。",
+      "startMs": 17600,
+      "endMs": 20460
     },
     {
       "i": 5,
-      "line": "六套命名视觉风格。",
-      "startMs": 23320,
-      "endMs": 26180
+      "line": "测试覆盖,全线通过。",
+      "startMs": 19960,
+      "endMs": 24100
     },
     {
       "i": 6,
-      "line": "持续演进,开源共建。",
-      "startMs": 25680,
-      "endMs": 29820
+      "line": "六套命名视觉风格。",
+      "startMs": 23600,
+      "endMs": 26460
     },
     {
       "i": 7,
-      "line": "让 AI 直接开箱生成视频。",
-      "startMs": 29320,
-      "endMs": 32340
+      "line": "持续演进,开源共建。",
+      "startMs": 25960,
+      "endMs": 30260
     },
     {
       "i": 8,
-      "line": "这就是 Reelforge。",
-      "startMs": 31840,
-      "endMs": 34060
+      "line": "让 AI 直接开箱生成视频。",
+      "startMs": 29760,
+      "endMs": 33420
     },
     {
       "i": 9,
+      "line": "这就是 Reelforge。",
+      "startMs": 32920,
+      "endMs": 35940
+    },
+    {
+      "i": 10,
       "line": "访问 GitHub,开始你的视频。",
-      "startMs": 33560,
-      "endMs": 36440
+      "startMs": 35440,
+      "endMs": 38160
     }
   ]
 }

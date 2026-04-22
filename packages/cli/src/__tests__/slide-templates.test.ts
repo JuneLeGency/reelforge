@@ -4,6 +4,7 @@ import {
   bulletStagger,
   dataChartReveal,
   endCard,
+  splitCompare,
   heroFadeUp,
   imageLeftText,
   imageRightText,
@@ -40,6 +41,7 @@ describe('SLIDE_TEMPLATES registry', () => {
       'photo-card',
       'picture-in-picture',
       'quote-card',
+      'split-compare',
       'split-reveal',
       'testimonial',
       'timeline-roadmap',
@@ -70,6 +72,65 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('timeline-roadmap')).toBe(timelineRoadmap);
     expect(resolveTemplate('end-card')).toBe(endCard);
     expect(resolveTemplate('arch-diagram')).toBe(archDiagram);
+    expect(resolveTemplate('split-compare')).toBe(splitCompare);
+  });
+});
+
+describe('splitCompare template', () => {
+  const base = {
+    index: 0,
+    startMs: 0,
+    endMs: 5000,
+    title: 'DSL vs 手写',
+    subtitle: '同样 5 行',
+    extras: {
+      leftTag: 'BEFORE',
+      leftTitle: '手写 HTML + GSAP',
+      leftBody: '<div class="title">...</div>\nanime.timeline()\n  .add({...})\n+ ffmpeg 拼接',
+      rightTag: 'AFTER',
+      rightTitle: 'rf config.json',
+      rightBody: '{ "slides": [\n  { "title": "Hi" }\n] }\nrf generate',
+    },
+  };
+
+  test('renders banner + two columns + divider', () => {
+    const out = splitCompare(base);
+    expect(out.html).toContain('class="banner"');
+    expect(out.html).toContain('class="column left"');
+    expect(out.html).toContain('class="column right"');
+    expect(out.html).toContain('class="divider"');
+    expect(out.html).toContain('>BEFORE<');
+    expect(out.html).toContain('>AFTER<');
+    expect(out.html).toContain('>手写 HTML + GSAP<');
+    expect(out.html).toContain('>rf config.json<');
+  });
+
+  test('splits body by newlines into .line rows', () => {
+    const out = splitCompare(base);
+    // leftBody 4 lines + rightBody 4 lines = 8 .line rows total
+    const totalLines = (out.html.match(/class="line"/g) || []).length;
+    expect(totalLines).toBe(8);
+  });
+
+  test('left column slides in from -30px, right from +30px', () => {
+    const out = splitCompare(base);
+    const left = out.animations.find((a) => a.selector.endsWith('.column.left'))!;
+    const right = out.animations.find((a) => a.selector.endsWith('.column.right'))!;
+    expect(left.keyframes[0]!.props.transform).toBe('translateX(-30px)');
+    expect(right.keyframes[0]!.props.transform).toBe('translateX(30px)');
+  });
+
+  test('divider scales from 0 to 1 vertically', () => {
+    const out = splitCompare(base);
+    const d = out.animations.find((a) => a.selector.endsWith('.divider'))!;
+    expect(d.keyframes[0]!.props.transform).toBe('scaleY(0)');
+  });
+
+  test('missing extras still produces valid HTML', () => {
+    const out = splitCompare({ index: 0, startMs: 0, endMs: 3000, title: 'x' });
+    expect(out.html).toContain('class="column left"');
+    expect(out.html).toContain('class="column right"');
+    expect(out.html).not.toContain('col-tag');
   });
 });
 

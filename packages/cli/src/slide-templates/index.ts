@@ -23,3 +23,4 @@ export { pictureInPicture, PIP_CSS } from './picture-in-picture';
 export { timelineRoadmap, TIMELINE_ROADMAP_CSS } from './timeline-roadmap';
 export { endCard, END_CARD_CSS } from './end-card';
 export { archDiagram, ARCH_DIAGRAM_CSS } from './arch-diagram';
+export { splitCompare, SPLIT_COMPARE_CSS } from './split-compare';

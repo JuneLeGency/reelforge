@@ -39,10 +39,25 @@
       ]
     },
     {
+      "template": "split-compare",
+      "title": "手写 vs 配置化",
+      "subtitle": "同一个视频,两条路径",
+      "extras": {
+        "leftTag": "BEFORE",
+        "leftTitle": "HTML + GSAP + ffmpeg",
+        "leftBody": "<h1>Reelforge</h1>\ngsap.timeline()\n  .from(h1, { y: 40 })\n  .to(h1, { opacity: 0 });\nffmpeg -i a.html ...\n# 每 slide 一份 js",
+        "rightTag": "AFTER",
+        "rightTitle": "rf generate",
+        "rightBody": "{\n  \"slides\": [{\n    \"template\": \"hero-fade-up\",\n    \"title\": \"Reelforge\"\n  }]\n}\n$ rf generate config.json"
+      },
+      "transition": "rgb-split",
+      "transitionDurationMs": 400
+    },
+    {
       "template": "data-chart-reveal",
       "title": "测试覆盖(tests)",
       "bullets": [
-        "cli: 174",
+        "cli: 183",
         "transitions: 42",
         "engine-chrome: 26",
         "captions: 27"
@@ -53,9 +68,7 @@
     {
       "template": "split-reveal",
       "title": "六套视觉风格",
-      "subtitle": "秒切主题 · 风格无缝",
-      "transition": "rgb-split",
-      "transitionDurationMs": 400
+      "subtitle": "秒切主题 · 风格无缝"
     },
     {
       "template": "timeline-roadmap",

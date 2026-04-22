@@ -15,6 +15,7 @@ import { lowerThird, LOWER_THIRD_CSS } from './lower-third';
 import { photoCard, PHOTO_CARD_CSS } from './photo-card';
 import { pictureInPicture, PIP_CSS } from './picture-in-picture';
 import { quoteCard, QUOTE_CARD_CSS } from './quote-card';
+import { splitCompare, SPLIT_COMPARE_CSS } from './split-compare';
 import { splitReveal, SPLIT_REVEAL_CSS } from './split-reveal';
 import { testimonial, TESTIMONIAL_CSS } from './testimonial';
 import { timelineRoadmap, TIMELINE_ROADMAP_CSS } from './timeline-roadmap';
@@ -38,6 +39,7 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'timeline-roadmap': timelineRoadmap,
   'end-card': endCard,
   'arch-diagram': archDiagram,
+  'split-compare': splitCompare,
 };
 
 /**
@@ -63,6 +65,7 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'timeline-roadmap': TIMELINE_ROADMAP_CSS,
   'end-card': END_CARD_CSS,
   'arch-diagram': ARCH_DIAGRAM_CSS,
+  'split-compare': SPLIT_COMPARE_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {
