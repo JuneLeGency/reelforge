@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  archDiagram,
   bulletStagger,
   dataChartReveal,
   endCard,
@@ -25,6 +26,7 @@ describe('SLIDE_TEMPLATES registry', () => {
   test('exposes the full template catalog', () => {
     const names = listTemplateNames().sort();
     expect(names).toEqual([
+      'arch-diagram',
       'bullet-stagger',
       'data-chart-reveal',
       'end-card',
@@ -67,6 +69,61 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('picture-in-picture')).toBe(pictureInPicture);
     expect(resolveTemplate('timeline-roadmap')).toBe(timelineRoadmap);
     expect(resolveTemplate('end-card')).toBe(endCard);
+    expect(resolveTemplate('arch-diagram')).toBe(archDiagram);
+  });
+});
+
+describe('archDiagram template', () => {
+  test('renders one node per bullet, N-1 arrows between them', () => {
+    const out = archDiagram({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Pipeline',
+      bullets: ['config.json', 'rf generate', 'chrome', 'ffmpeg', 'mp4'],
+    });
+    expect(out.html).toContain('class="slide slide-arch-diagram"');
+    const nodeCount = (out.html.match(/class="node"/g) || []).length;
+    const arrowCount = (out.html.match(/class="arrow"/g) || []).length;
+    expect(nodeCount).toBe(5);
+    expect(arrowCount).toBe(4);
+  });
+
+  test('parses "label | caption" bullets into label + caption', () => {
+    const out = archDiagram({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: ['rf generate | CLI entry', 'chrome | render'],
+    });
+    expect(out.html).toContain('class="node-label">rf generate<');
+    expect(out.html).toContain('class="node-caption">CLI entry<');
+  });
+
+  test('nodes stagger 200 ms apart, arrows keyed to node landings', () => {
+    const out = archDiagram({
+      index: 0,
+      startMs: 0,
+      endMs: 6000,
+      bullets: ['A', 'B', 'C'],
+    });
+    const nodeStarts = out.animations
+      .filter((a) => /\.node\[data-i="\d+"\]$/.test(a.selector))
+      .map((a) => a.keyframes[1]!.atMs)
+      .sort((a, b) => a - b);
+    expect(nodeStarts[1]! - nodeStarts[0]!).toBe(200);
+    expect(nodeStarts[2]! - nodeStarts[1]!).toBe(200);
+    // Arrows = N-1
+    const arrowAnims = out.animations.filter((a) =>
+      /\.arrow\[data-i=/.test(a.selector),
+    );
+    expect(arrowAnims).toHaveLength(2);
+  });
+
+  test('no title / no bullets still produces a valid output', () => {
+    const out = archDiagram({ index: 0, startMs: 0, endMs: 3000 });
+    expect(out.html).toContain('class="pipeline"');
+    expect((out.html.match(/class="node"/g) || []).length).toBe(0);
   });
 });
 

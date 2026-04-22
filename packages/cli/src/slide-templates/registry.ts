@@ -1,3 +1,4 @@
+import { archDiagram, ARCH_DIAGRAM_CSS } from './arch-diagram';
 import { bulletStagger, BULLET_STAGGER_CSS } from './bullet-stagger';
 import { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
 import { endCard, END_CARD_CSS } from './end-card';
@@ -36,6 +37,7 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'picture-in-picture': pictureInPicture,
   'timeline-roadmap': timelineRoadmap,
   'end-card': endCard,
+  'arch-diagram': archDiagram,
 };
 
 /**
@@ -60,6 +62,7 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'picture-in-picture': PIP_CSS,
   'timeline-roadmap': TIMELINE_ROADMAP_CSS,
   'end-card': END_CARD_CSS,
+  'arch-diagram': ARCH_DIAGRAM_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {
