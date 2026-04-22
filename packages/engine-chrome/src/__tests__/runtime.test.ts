@@ -32,11 +32,12 @@ describe('RUNTIME_SCRIPT', () => {
     expect(typeof rf.seekFrame).toBe('function');
     expect(rf.ready).toBe(true);
     expect(Array.isArray(rf.adapters)).toBe(true);
-    // WAAPI auto-registered (document.getAnimations exists) + lottie (always
-    // registered when window is available). No video/three/image since their
-    // feature checks fail in this mock.
+    // manual-keyframes + lottie are always registered. No video/three/
+    // image since their feature checks fail in this mock. (WAAPI-native
+    // adapter was retired in favor of manual-keyframes — Chromium
+    // headless has a seek+pause interpolation bug that made it unusable.)
     const names = (rf.adapters as Array<{ name: string }>).map((a) => a.name).sort();
-    expect(names).toEqual(['lottie', 'waapi']);
+    expect(names).toEqual(['lottie', 'manual-keyframes']);
   });
 
   test('seekFrame invokes each adapter, swallows errors, and returns a Promise', async () => {

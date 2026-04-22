@@ -54,19 +54,137 @@ export const RUNTIME_SCRIPT = String.raw`
       });
     }
 
-    if (typeof document !== 'undefined' && typeof document.getAnimations === 'function') {
-      window.__rf.registerAdapter({
-        name: 'waapi',
-        seek: function (ctx) {
-          var anims = document.getAnimations();
-          for (var i = 0; i < anims.length; i++) {
-            try {
-              anims[i].pause();
-              anims[i].currentTime = ctx.timeMs;
-            } catch (e) { /* noop */ }
+    // Manual keyframe seek — bypasses WAAPI because Chromium headless
+    // has a seek+pause interpolation bug when the last keyframe offset
+    // is < 1. We read window.__rf.plans (set by render-composition) and
+    // apply linear interpolation per property directly to element.style.
+    // This also eliminates the compositor-commit problem that forced
+    // Animation.commitStyles() on the previous path.
+    window.__rf.registerAdapter({
+      name: 'manual-keyframes',
+      seek: function (ctx) {
+        var plans = window.__rf.plans;
+        if (!plans || !plans.length) return;
+        var t = ctx.timeMs;
+        for (var i = 0; i < plans.length; i++) {
+          var plan = plans[i];
+          var el = plan._el;
+          if (!el) {
+            el = document.querySelector(plan.selector);
+            if (!el) { plan._el = null; continue; }
+            plan._el = el;
           }
-        },
-      });
+          applyPlanAtTime(el, plan.keyframes, t);
+        }
+      },
+    });
+
+    function applyPlanAtTime(el, kfs, t) {
+      if (!kfs || kfs.length === 0) return;
+      // Find the keyframe bracket [a, b] such that a.atMs <= t < b.atMs.
+      // If t is before first keyframe, hold first; after last, hold last.
+      var a, b;
+      if (t <= kfs[0].atMs) { a = kfs[0]; b = kfs[0]; }
+      else if (t >= kfs[kfs.length - 1].atMs) { a = kfs[kfs.length - 1]; b = kfs[kfs.length - 1]; }
+      else {
+        for (var i = 0; i < kfs.length - 1; i++) {
+          if (kfs[i].atMs <= t && t < kfs[i + 1].atMs) { a = kfs[i]; b = kfs[i + 1]; break; }
+        }
+      }
+      if (!a || !b) return;
+      var span = b.atMs - a.atMs;
+      var p = span > 0 ? (t - a.atMs) / span : 0;
+      blendPropsInto(el, a.props, b.props, p);
+    }
+
+    function blendPropsInto(el, fromProps, toProps, p) {
+      var keys = {};
+      for (var k in fromProps) keys[k] = 1;
+      for (var k in toProps) keys[k] = 1;
+      for (var k in keys) {
+        var av = fromProps[k];
+        var bv = toProps[k];
+        if (av === undefined) av = bv;
+        if (bv === undefined) bv = av;
+        var out;
+        if (typeof av === 'number' && typeof bv === 'number') {
+          out = av + (bv - av) * p;
+        } else if (typeof av === 'string' && typeof bv === 'string') {
+          out = blendStrings(k, av, bv, p);
+        } else {
+          out = p < 1 ? av : bv;
+        }
+        // Convert camelCase to kebab-case for CSS (transform already ok).
+        var cssProp = k.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
+        try { el.style.setProperty(cssProp, String(out)); } catch (e) { /* noop */ }
+      }
+    }
+
+    // Blend two string property values. For transform we parse each
+    // function (translateY(40px), rotate(12deg), scale(0.5), etc.) and
+    // linearly interpolate matching axes. If structures don't align we
+    // step to the nearest endpoint.
+    function blendStrings(propName, a, b, p) {
+      if (a === b) return a;
+      if (propName === 'transform') {
+        var fa = parseTransformList(a);
+        var fb = parseTransformList(b);
+        if (fa && fb && fa.length === fb.length) {
+          var same = true;
+          for (var i = 0; i < fa.length; i++) {
+            if (fa[i].fn !== fb[i].fn) { same = false; break; }
+          }
+          if (same) {
+            var parts = [];
+            for (var i = 0; i < fa.length; i++) {
+              var aa = fa[i], bb = fb[i];
+              if (aa.values.length !== bb.values.length) { parts.push(p < 0.5 ? renderFn(aa) : renderFn(bb)); continue; }
+              var blended = [];
+              for (var v = 0; v < aa.values.length; v++) {
+                var va = aa.values[v], vb = bb.values[v];
+                if (va.unit === vb.unit) {
+                  blended.push({ num: va.num + (vb.num - va.num) * p, unit: va.unit });
+                } else {
+                  blended.push(p < 0.5 ? va : vb);
+                }
+              }
+              parts.push(renderFn({ fn: aa.fn, values: blended }));
+            }
+            return parts.join(' ');
+          }
+        }
+      }
+      return p < 1 ? a : b;
+    }
+
+    function parseTransformList(s) {
+      if (!s || s === 'none') return [];
+      var re = /([a-zA-Z]+)\(([^)]+)\)/g;
+      var out = [];
+      var m;
+      while ((m = re.exec(s)) !== null) {
+        var fn = m[1];
+        var args = m[2].split(',').map(function (x) { return x.trim(); });
+        var values = [];
+        for (var i = 0; i < args.length; i++) {
+          var nm = args[i].match(/^(-?\d+(?:\.\d+)?)\s*([a-zA-Z%]*)$/);
+          if (!nm) return null;
+          values.push({ num: parseFloat(nm[1]), unit: nm[2] || '' });
+        }
+        out.push({ fn: fn, values: values });
+      }
+      return out;
+    }
+
+    function renderFn(f) {
+      var parts = [];
+      for (var i = 0; i < f.values.length; i++) {
+        var v = f.values[i];
+        var n = v.num;
+        var s = (Math.abs(n - Math.round(n)) < 1e-9) ? String(Math.round(n)) : n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+        parts.push(s + v.unit);
+      }
+      return f.fn + '(' + parts.join(', ') + ')';
     }
 
     // Three.js adapter — compositions dispatch "rf-seek" on window with

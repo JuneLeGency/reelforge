@@ -279,24 +279,14 @@ ${audioTag}
   (function () {
     var TOTAL = ${Math.max(1, Math.round(totalDurationMs))};
     var plans = ${animsJson};
-    plans.forEach(function (plan) {
-      var el = document.querySelector(plan.selector);
-      if (!el) return;
-      // Translate absolute-ms keyframes into WAAPI offset-based keyframes.
-      var kfs = plan.keyframes.map(function (kf) {
-        var offset = Math.max(0, Math.min(1, kf.atMs / TOTAL));
-        return Object.assign({}, kf.props, { offset: offset });
-      });
-      // Ensure strictly monotonic offsets (WAAPI rejects equal-offset runs with different properties otherwise).
-      var last = -1;
-      kfs.forEach(function (kf) {
-        if (kf.offset <= last) kf.offset = Math.min(1, last + 1e-6);
-        last = kf.offset;
-      });
-      try {
-        el.animate(kfs, { duration: TOTAL, fill: 'both', easing: plan.easing || 'linear' });
-      } catch (e) { /* unsupported in env, fall through */ }
-    });
+    // Expose plans on window so the engine-chrome runtime can seek them
+    // manually per frame. WAAPI would be the canonical path but
+    // Chromium's headless seek+screenshot pipeline has a keyframe-
+    // interpolation bug when last offset < 1 + paused + seek: progress
+    // is scaled against the last offset, flipping everything to the
+    // end-keyframe's value prematurely. Manual interpolation sidesteps it.
+    (window.__rf = window.__rf || {}).plans = plans;
+    window.__rf.totalMs = TOTAL;
   })();
   </script>${overlayScript}
 </body>

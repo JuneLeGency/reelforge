@@ -666,6 +666,11 @@ export const generateCommand = defineCommand({
       type: 'string',
       description: 'Visual style (swiss-pulse, dark-premium, neon-electric, warm-editorial, mint-fresh, terminal-green). Overrides config.style.',
     },
+    useBeginFrame: {
+      type: 'boolean',
+      description: 'Use HeadlessExperimental.beginFrame CDP for deterministic frame capture (required when WAAPI transform animations must commit per frame).',
+      default: false,
+    },
   },
   async run({ args }) {
     const configPath = resolvePath(args.config);
@@ -1010,6 +1015,7 @@ export const generateCommand = defineCommand({
         outputPath: silentPath,
         executablePath: chromePath,
         ffmpegBinary: args.ffmpeg,
+        ...(args.useBeginFrame ? { useBeginFrame: true } : {}),
         onProgress: ({ frame, total }) => {
           if (frame % progressEvery === 0 || frame === total) {
             process.stderr.write(`\r  frame ${frame}/${total}`);

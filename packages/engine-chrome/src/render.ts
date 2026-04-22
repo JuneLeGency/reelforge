@@ -81,7 +81,7 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
 
   const browser: Browser = await puppeteer.launch({
     executablePath,
-    headless: true,
+    headless: 'shell' as unknown as boolean,
     args: flagSet,
     defaultViewport: { width, height, deviceScaleFactor: 1 },
   });
@@ -90,6 +90,13 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
 
   try {
     const page: Page = await browser.newPage();
+    page.on('console', (msg) => {
+      const t = msg.type();
+      if (t === 'error' || t === 'warn') {
+        process.stderr.write(`[chrome ${t}] ${msg.text()}\n`);
+      }
+    });
+    page.on('pageerror', (err) => process.stderr.write(`[chrome pageerror] ${err.message}\n`));
     await page.evaluateOnNewDocument(RUNTIME_SCRIPT);
     await page.goto(pathToFileURL(resolvePath(htmlPath)).toString(), {
       waitUntil: 'networkidle0',
@@ -124,6 +131,14 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
           __rf?: { seekFrame: (ms: number) => Promise<unknown> };
         };
         await w.__rf?.seekFrame(t);
+        // Wait for two animation frames so that the style mutations
+        // the manual-keyframes adapter wrote land in the composited
+        // paint tree before the screenshot is taken. Without this, seek
+        // + style.setProperty + screenshot race and the screenshot
+        // captures the frame from *before* seek.
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
       }, timeMs);
       const buffer = await captureFrame(timeMs);
       await ff.write(buffer);
