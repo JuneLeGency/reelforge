@@ -1,7 +1,11 @@
 import { archDiagram, ARCH_DIAGRAM_CSS } from './arch-diagram';
 import { bulletStagger, BULLET_STAGGER_CSS } from './bullet-stagger';
+import { codeBlock, CODE_BLOCK_CSS } from './code-block';
 import { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
+import { dataGrid, DATA_GRID_CSS } from './data-grid';
 import { endCard, END_CARD_CSS } from './end-card';
+import { gradientBg, GRADIENT_BG_CSS } from './gradient-bg';
+import { newsTitle, NEWS_TITLE_CSS } from './news-title';
 import { heroFadeUp, HERO_FADE_UP_CSS } from './hero-fade-up';
 import {
   imageLeftText,
@@ -40,6 +44,10 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'end-card': endCard,
   'arch-diagram': archDiagram,
   'split-compare': splitCompare,
+  'code-block': codeBlock,
+  'data-grid': dataGrid,
+  'news-title': newsTitle,
+  'gradient-bg': gradientBg,
 };
 
 /**
@@ -66,6 +74,10 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'end-card': END_CARD_CSS,
   'arch-diagram': ARCH_DIAGRAM_CSS,
   'split-compare': SPLIT_COMPARE_CSS,
+  'code-block': CODE_BLOCK_CSS,
+  'data-grid': DATA_GRID_CSS,
+  'news-title': NEWS_TITLE_CSS,
+  'gradient-bg': GRADIENT_BG_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {

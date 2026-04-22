@@ -2,8 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import {
   archDiagram,
   bulletStagger,
+  codeBlock,
   dataChartReveal,
+  dataGrid,
   endCard,
+  gradientBg,
+  newsTitle,
   splitCompare,
   heroFadeUp,
   imageLeftText,
@@ -29,8 +33,11 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(names).toEqual([
       'arch-diagram',
       'bullet-stagger',
+      'code-block',
       'data-chart-reveal',
+      'data-grid',
       'end-card',
+      'gradient-bg',
       'hero-fade-up',
       'image-left-text',
       'image-right-text',
@@ -38,6 +45,7 @@ describe('SLIDE_TEMPLATES registry', () => {
       'kinetic-type',
       'logo-outro',
       'lower-third',
+      'news-title',
       'photo-card',
       'picture-in-picture',
       'quote-card',
@@ -73,6 +81,167 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('end-card')).toBe(endCard);
     expect(resolveTemplate('arch-diagram')).toBe(archDiagram);
     expect(resolveTemplate('split-compare')).toBe(splitCompare);
+    expect(resolveTemplate('code-block')).toBe(codeBlock);
+    expect(resolveTemplate('data-grid')).toBe(dataGrid);
+    expect(resolveTemplate('news-title')).toBe(newsTitle);
+    expect(resolveTemplate('gradient-bg')).toBe(gradientBg);
+  });
+});
+
+describe('codeBlock template', () => {
+  test('renders terminal window with traffic lights + code lines', () => {
+    const out = codeBlock({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'demo',
+      subtitle: 'app.ts',
+      bullets: [
+        '// top-level comment',
+        'const name = "Reelforge";',
+        'function run() {',
+        '  return 42;',
+        '}',
+      ],
+    });
+    expect(out.html).toContain('class="window-chrome"');
+    expect(out.html).toContain('class="dot red"');
+    expect(out.html).toContain('class="dot yellow"');
+    expect(out.html).toContain('class="dot green"');
+    expect(out.html).toContain('class="filename">app.ts<');
+    expect((out.html.match(/class="code-line"/g) || []).length).toBe(5);
+  });
+
+  test('applies comment / string / keyword / number token classes', () => {
+    const out = codeBlock({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: [
+        '// hello',
+        'const x = "hi";',
+        'return 42;',
+      ],
+    });
+    expect(out.html).toContain('class="tok-comment"');
+    expect(out.html).toContain('class="tok-string"');
+    expect(out.html).toContain('class="tok-keyword"');
+    expect(out.html).toContain('class="tok-number"');
+  });
+
+  test('line entrance stagger is 120 ms apart', () => {
+    const out = codeBlock({
+      index: 0,
+      startMs: 0,
+      endMs: 6000,
+      bullets: ['a', 'b', 'c'],
+    });
+    const starts = out.animations
+      .filter((a) => a.selector.includes('.code-line'))
+      .map((a) => a.keyframes[1]!.atMs)
+      .sort((a, b) => a - b);
+    expect(starts[1]! - starts[0]!).toBe(120);
+    expect(starts[2]! - starts[1]!).toBe(120);
+  });
+});
+
+describe('dataGrid template', () => {
+  test('parses "Label: value" into tiles and picks column count', () => {
+    const out = dataGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'KPIs',
+      bullets: ['MRR: $42K', 'Users: 1.2M', 'Churn: 2.1%', 'NPS: 68'],
+    });
+    const tiles = (out.html.match(/class="tile"/g) || []).length;
+    expect(tiles).toBe(4);
+    expect(out.html).toContain('grid-template-columns: repeat(2, 1fr)');
+    expect(out.html).toContain('>$42K<');
+    expect(out.html).toContain('>MRR<');
+  });
+
+  test('6 tiles → 3 columns', () => {
+    const out = dataGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      bullets: ['A: 1', 'B: 2', 'C: 3', 'D: 4', 'E: 5', 'F: 6'],
+    });
+    expect(out.html).toContain('grid-template-columns: repeat(3, 1fr)');
+  });
+
+  test('tile stagger is 80 ms apart', () => {
+    const out = dataGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      bullets: ['A: 1', 'B: 2', 'C: 3'],
+    });
+    const starts = out.animations
+      .filter((a) => a.selector.includes('.tile'))
+      .map((a) => a.keyframes[1]!.atMs)
+      .sort((a, b) => a - b);
+    expect(starts[1]! - starts[0]!).toBe(80);
+  });
+});
+
+describe('newsTitle template', () => {
+  test('renders breaking pill + headline + ticker row', () => {
+    const out = newsTitle({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Reelforge ships 22 templates',
+      subtitle: 'open-source video framework goes production',
+      bullets: ['R1 spring easing', 'R4 enterprise templates', 'caption sync'],
+      extras: { tag: 'BREAKING', source: 'REELFORGE LIVE' },
+    });
+    expect(out.html).toContain('class="tag"');
+    expect(out.html).toContain('>BREAKING<');
+    expect(out.html).toContain('class="headline"');
+    expect(out.html).toContain('Reelforge ships 22 templates');
+    expect(out.html).toContain('class="ticker"');
+    expect(out.html).toContain('R1 spring easing  •  R4 enterprise templates');
+  });
+
+  test('ticker text translates from 100% to -100%', () => {
+    const out = newsTitle({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'x',
+      bullets: ['one'],
+    });
+    const ticker = out.animations.find((a) => a.selector.endsWith('.ticker-text'))!;
+    expect(ticker.keyframes[0]!.props.transform).toBe('translateX(100%)');
+    expect(ticker.keyframes.at(-1)!.props.transform).toBe('translateX(-100%)');
+  });
+});
+
+describe('gradientBg template', () => {
+  test('emits two gradient layers + title/subtitle, applies extras colours', () => {
+    const out = gradientBg({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Reelforge',
+      subtitle: 'ambient',
+      extras: { from: '#ff0000', via: '#00ff00', to: '#0000ff' },
+    });
+    expect(out.html).toContain('class="bg-a"');
+    expect(out.html).toContain('class="bg-b"');
+    expect(out.html).toContain('#ff0000');
+    expect(out.html).toContain('#00ff00');
+    expect(out.html).toContain('#0000ff');
+    expect(out.html).toContain('class="title"');
+  });
+
+  test('bg-a scales 1.05→1.15 + rotates 0→8deg across the slide', () => {
+    const out = gradientBg({ index: 0, startMs: 0, endMs: 5000, title: 'x' });
+    const bgA = out.animations.find((a) => a.selector.endsWith('.bg-a'))!;
+    expect(bgA.keyframes[0]!.props.transform).toBe('scale(1.05) rotate(0deg)');
+    expect(bgA.keyframes.at(-1)!.props.transform).toBe('scale(1.15) rotate(8deg)');
   });
 });
 
