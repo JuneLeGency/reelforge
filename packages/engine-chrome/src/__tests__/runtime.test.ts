@@ -81,6 +81,49 @@ describe('RUNTIME_SCRIPT', () => {
     expect(bag.asyncDone).toBe(true);
   });
 
+  test('fade images install a WAAPI animation and are excluded from the simple visibility adapter', () => {
+    const animations: Array<{ keyframes: unknown; opts: unknown }> = [];
+    const makeImg = (start: string, duration: string, extra: Record<string, string> = {}) => {
+      const attrs: Record<string, string> = {
+        'data-start': start,
+        'data-duration': duration,
+        ...extra,
+      };
+      return {
+        style: { visibility: '' },
+        getAttribute: (k: string) => attrs[k] ?? null,
+        animate: (keyframes: unknown, opts: unknown) => {
+          animations.push({ keyframes, opts });
+          return { pause: () => undefined, currentTime: 0 };
+        },
+      };
+    };
+    const imgs = [
+      makeImg('0', '2', { 'data-rf-transition-out-ms': '500' }),
+      makeImg('2', '2', { 'data-rf-transition-in-ms': '500', 'data-rf-transition-out-ms': '500' }),
+    ];
+    const w: Record<string, unknown> = {};
+    const doc = {
+      readyState: 'complete',
+      getAnimations: undefined,
+      documentElement: {
+        getAttribute: (k: string) => (k === 'data-rf-duration' ? '4' : null),
+      },
+      querySelectorAll: (sel: string) =>
+        sel === 'img[data-start][data-duration]' ? imgs : [],
+    };
+    const fn = new Function('window', 'document', 'console', 'addEventListener', RUNTIME_SCRIPT);
+    fn(w, doc, { warn: () => undefined }, () => undefined);
+    const rf = w.__rf as { adapters: Array<{ name: string }> };
+    expect(animations.length).toBe(2);
+    const opts = animations[0]!.opts as { duration: number; fill: string };
+    expect(opts.duration).toBe(4000);
+    expect(opts.fill).toBe('both');
+    // With every img opted into fade, no simple-image adapter is registered.
+    const imageAdapter = rf.adapters.find((a) => a.name === 'image');
+    expect(imageAdapter).toBeUndefined();
+  });
+
   test('image adapter toggles visibility based on the active time window', () => {
     const imgs = [
       {

@@ -1,0 +1,43 @@
+{
+  config: { width: 1280, height: 720, fps: 30 },
+  clips: [
+    {
+      duration: 2,
+      transition: 'fade',
+      layers: [
+        { type: 'image', src: '../fastpath-demo/slide-a.png', fit: 'cover' },
+        {
+          type: 'title',
+          text: '第一张',
+          style: { color: '#fff', fontSize: 96, position: 'center' },
+          entrance: 'slide-up',
+        },
+      ],
+    },
+    {
+      duration: 2,
+      transition: 'fade',
+      layers: [
+        { type: 'image', src: '../fastpath-demo/slide-b.png', fit: 'cover' },
+        {
+          type: 'title',
+          text: '第二张',
+          style: { color: '#fff', fontSize: 96, position: 'center' },
+          entrance: 'slide-up',
+        },
+      ],
+    },
+    {
+      duration: 2,
+      layers: [
+        { type: 'image', src: '../fastpath-demo/slide-c.png', fit: 'cover' },
+        {
+          type: 'title',
+          text: '第三张',
+          style: { color: '#fff', fontSize: 96, position: 'center' },
+          entrance: 'slide-up',
+        },
+      ],
+    },
+  ],
+}

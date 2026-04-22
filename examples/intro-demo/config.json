@@ -1,0 +1,17 @@
+{
+  "audio": "./narration.mp3",
+  "timings": "./narration.srt",
+  "images": [
+    "./slides/slide-01.svg",
+    "./slides/slide-02.svg",
+    "./slides/slide-03.svg",
+    "./slides/slide-04.svg",
+    "./slides/slide-05.svg",
+    "./slides/slide-06.svg",
+    "./slides/slide-07.svg",
+    "./slides/slide-08.svg"
+  ],
+  "width": 1280,
+  "height": 720,
+  "fps": 30
+}

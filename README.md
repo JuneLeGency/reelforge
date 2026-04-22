@@ -1,12 +1,12 @@
 # Reelforge
 
-> **Programmatic forge for reels.** A universal framework for generating videos from HTML, JSON, TypeScript, or AI agents — with first-class TTS, captions, and image/video/audio composition.
+> **Programmatic forge for reels.** A universal framework for generating videos from HTML, JSON, TypeScript, or AI agents — with first-class TTS + STT, DOM-native captions, and image/video/audio composition.
 
-**Status: M1 end-to-end pipeline working.** HTML → IR → Chrome-captured frames → ffmpeg-muxed MP4. See [**DESIGN.md**](./DESIGN.md) for the full architecture.
+**Status: M1–M3 done, full pipeline closed.** HTML → IR → Chrome / FFmpeg render → MP4. End-to-end validated with a GPU TTS service. See [`examples/intro-demo/`](./examples/intro-demo) for the flagship demo and [**DESIGN.md**](./DESIGN.md) for the architecture.
 
 ---
 
-## Try it in 30 seconds
+## Try it in 30 seconds (no API key)
 
 ```bash
 bun install
@@ -14,30 +14,41 @@ bun packages/cli/src/bin.ts render examples/hello-world/index.html -o out/hello.
 open out/hello.mp4
 ```
 
-That renders a 3-second 1280×720 30 fps MP4 from an inline-SVG background + WAAPI-animated title — no external assets, no API keys. See [`examples/hello-world/`](./examples/hello-world) for the details and variations (adding narration, changing aspect ratio, etc.).
+3-second 1280×720 30 fps MP4 — inline-SVG background + WAAPI-animated title. Zero external assets, zero network.
 
 **Requirements:** Node ≥ 22, `ffmpeg` on `PATH`, Google Chrome installed.
 
-### Going further: narration-driven generation
+## Narration-driven generation
 
-With an `ELEVENLABS_API_KEY`, the pipeline can take a script + slides and produce a fully narrated video:
+Three modes, all pass through the same `generate` command — Reelforge picks the mode from the config fields:
 
 ```bash
-bun packages/cli/src/bin.ts generate examples/narration-demo/config.json \
-  -o out/narration.mp4 --srt out/narration.srt
+# 1. Reelforge calls ElevenLabs for you
+ELEVENLABS_API_KEY=... reelforge generate config.json -o out.mp4    # { narration, voice, images }
+
+# 2. Bring your own audio + pre-computed timings (SRT or Whisper JSON)
+reelforge generate config.json -o out.mp4                            # { audio, timings, images }
+
+# 3. Bring your own audio, let Reelforge run whisper.cpp locally
+WHISPER_BINARY=/opt/whisper-cpp WHISPER_MODEL=.../ggml-base.en.bin \
+  reelforge generate config.json -o out.mp4                          # { audio, images }
 ```
 
-Slide durations are aligned to sentence-level TTS word timings — no manual timing. DOM-overlay captions are baked in automatically (see [`examples/captions-demo/`](./examples/captions-demo) for the standalone proof — captions work with **any** ffmpeg, no libass required). See [`examples/narration-demo/`](./examples/narration-demo).
+Slide durations auto-align to sentence boundaries. TikTok-style per-word highlights with `--tiktok-captions`. DOM-rendered captions work with **any** ffmpeg build — no libass required.
 
-### All CLI commands
+**Flagship demo:** [`examples/intro-demo/`](./examples/intro-demo) — a 47.64 s Chinese self-intro, narration synthesized by a remote VoxCPM2 GPU service, 8 sentence-aligned slides, word-by-word caption highlights.
+
+## All CLI commands
 
 | Command | Purpose |
 |---|---|
 | `reelforge init <dir>` | Scaffold a new project from the hello-world template |
-| `reelforge preview <html>` | Live-reloading HTML preview server (WebSocket hot-reload) |
-| `reelforge render <html> -o <mp4>` | Compile HTML → IR → rendered MP4 |
-| `reelforge tts "<text>" --voice <id> -o <mp3>` | Standalone narration synthesis (+ optional SRT) |
-| `reelforge generate <config.json> -o <mp4>` | Full script→slides→video pipeline (add `--tiktok-captions` for per-word highlights) |
+| `reelforge preview <html>` | Live-reloading HTML preview server |
+| `reelforge render <input> -o <mp4>` | Compile + render. Input: `.html` / `.json` / `.json5`. Auto-picks FFmpeg fast path when eligible; `--engine chrome/ffmpeg` to override; `--parallelism N` splits the frame range across N Chromes on long renders. |
+| `reelforge tts "<text>" --voice <id>` | Standalone ElevenLabs narration (+ optional SRT) |
+| `reelforge stt <audio>` | Transcribe an audio file via whisper.cpp → SRT / JSON / TXT |
+| `reelforge captions <file>` | Inspect + convert SRT ↔ Whisper JSON ↔ TikTokPage pages |
+| `reelforge generate <config.json>` | Full pipeline: narration → sentence cuts → captions → render. See modes above. |
 | `reelforge mcp` | Start the MCP server on stdio for Claude Code / Cursor / Codex |
 
 ## Why another video framework?
@@ -57,13 +68,13 @@ Reelforge borrows from all of them and unifies them behind a single Intermediate
 ```
 Authoring   →   HTML  | JSON5 DSL  | TS Generator  | AI Agent (Skills + MCP)
                                   ↓
-    IR      →   VideoProject (assets · timeline · captions · effects)
+    IR      →   VideoProject (assets · timeline · captions · transitions)
                                   ↓
 Orchestrator →  TTS · STT · LLM · Storage · Image Providers (Protocol-based)
                                   ↓
-Renderers   →   Chrome+HTML  |  Canvas+Generator  |  FFmpeg fast path  |  WebCodecs
+Renderers   →   Chrome+HTML  |  FFmpeg fast path (xfade)  |  Canvas+Generator  |  WebCodecs
                                   ↓
-   Output   →   Audio mix · Caption burn/SRT · MP4 / WebM / GIF
+   Output   →   Audio mix · DOM / libass captions · MP4 / WebM / GIF
 ```
 
 Full detail in [DESIGN.md](./DESIGN.md).
@@ -73,33 +84,56 @@ Full detail in [DESIGN.md](./DESIGN.md).
 | Package | What it does |
 |---|---|
 | [`@reelforge/ir`](./packages/ir) | TypeScript types + Zod schema for `VideoProject` (the IR everyone compiles to) |
-| [`@reelforge/captions`](./packages/captions) | Word-timings → captions, TikTok-style pagination, SRT round-trip |
-| [`@reelforge/html`](./packages/html) | HTML frontend — compile `data-*`-annotated HTML into IR |
+| [`@reelforge/captions`](./packages/captions) | Word-timings → captions, TikTok-style pagination, SRT ↔ Whisper JSON parsers |
+| [`@reelforge/transitions`](./packages/transitions) | 46-name xfade catalog + 20 curated aliases (fade / wipe-left / slide-up / …) |
+| [`@reelforge/html`](./packages/html) | HTML frontend — compile `data-*`-annotated HTML into IR, including `data-rf-transition-{in,out}` |
 | [`@reelforge/dsl`](./packages/dsl) | JSON5 DSL frontend — editly-style clip/layer config → HTML → IR |
-| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI / image / video), image2pipe → ffmpeg, opt-in BeginFrame CDP path, parallel frame segments |
-| [`@reelforge/engine-ffmpeg`](./packages/engine-ffmpeg) | Fast-path backend — IR → ffmpeg `filter_complex` → mp4, no Chrome, ~13× faster on slide-only projects |
-| [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video (`atrim` + `adelay` + `amix`), optional libass subtitle burn |
+| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — WAAPI / GSAP / image / video adapters, image2pipe → ffmpeg, opt-in BeginFrame CDP, parallel frame segments, WAAPI cross-fade transitions |
+| [`@reelforge/engine-ffmpeg`](./packages/engine-ffmpeg) | Fast-path backend — IR → filter_complex (with xfade chain) → mp4, no Chrome |
+| [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video, optional libass subtitle burn |
 | [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
-| [`@reelforge/mcp`](./packages/mcp) | MCP server — exposes compile / introspect tools to AI agents over stdio |
-| [`@reelforge/cli`](./packages/cli) | `reelforge render` / `generate` / `preview` / `init` / `tts` / `mcp` |
+| [`@reelforge/providers-stt-whisper`](./packages/providers-stt-whisper) | Local whisper.cpp — audio file → word-level timings |
+| [`@reelforge/mcp`](./packages/mcp) | MCP server — expose compile / introspect tools to AI agents over stdio |
+| [`@reelforge/cli`](./packages/cli) | `reelforge` command — init / preview / render / tts / stt / captions / generate / mcp |
 
-**186 tests across 10 packages, all green.**
+**241 tests across 13 packages, all green.**
 
 ## Design principles
 
 1. Author once, render anywhere — any frontend compiles to the same IR.
 2. Agent-first — CLI non-interactive by default, Skills + MCP built in, IR is structured JSON.
 3. Deterministic rendering — same IR + assets = byte-identical output.
-4. Audio-driven time — TTS word-level timestamps are the master clock.
-5. Composable, not monolithic — every Provider / Layer / Transition / Effect / FrameAdapter is a plugin.
+4. **Reelforge is a consumer of TTS, not a producer.** Bring your own narration from any service; we align, caption, and render.
+5. DOM > libass — text is a graphics problem solved in the render layer, never in ffmpeg filters.
+6. Composable, not monolithic — every Provider / Layer / Transition / Effect / FrameAdapter is a plugin.
+
+## Performance (measured)
+
+Benchmarks on a M-series MacBook, local Chrome + Homebrew ffmpeg:
+
+| Workload | Engine | Time | Notes |
+|---|---|---|---|
+| hello-world (3 s, 90 f) | chrome, p=1 | 6.9 s | Single Chrome |
+| hello-world (3 s, 90 f) | chrome, p=4 | 3.3 s | 2.1× speedup; short video, parallel startup cost amortizes |
+| fastpath-demo (6 s, 180 f) | chrome, p=1 | 8.7 s | Single Chrome |
+| fastpath-demo (6 s, 180 f) | **ffmpeg**  | **0.6 s** | **13× speedup** — IR is fast-path eligible (pure media, no animations) |
+| intro-demo (47.6 s, 1430 f) | chrome, p=1 | **123 s** | 2.6× realtime (~12 rendered fps). Target baseline. |
+| intro-demo (47.6 s, 1430 f) | chrome, p=4 | 336 s | **2.7× slower** — 4 Chromes contend on laptop cores |
+
+Takeaways:
+
+- **FFmpeg fast path is the big win** when the project qualifies (image/video/audio clips, no caption tracks, no effects).
+- **Chrome parallelism is a laptop anti-pattern for long videos** — Chrome is already single-thread-CPU-bound during screenshot; multiple processes thrash. Parallelism shines on Linux servers with real core counts and on short videos where startup dominates.
+- The main frame-level optimization still in flight: **BeginFrame CDP on Linux** (`--use-begin-frame`) + eventually WebCodecs for in-browser rendering.
 
 ## Status & Roadmap
 
-- ✅ **M0 — Architecture and skeleton** — IR contract, monorepo, toolchain, DESIGN.md
-- ✅ **M1 — End-to-end MVP** — HTML + Chrome engine + ElevenLabs TTS + mux + CLI
-- ✅ **M2 — Multiple frontends + agent integration** — JSON5 DSL, `generate` pipeline with TikTok-style word highlights, MCP server with 4 structured tools
-- ✅ **M3 — Multiple backends** — BeginFrame CDP opt-in; FFmpeg fast path (`--engine ffmpeg` → ~13× speedup on slide projects); parallel frame segments (`--parallelism N` on Chrome, ~2× at 4 workers). 🔜 Canvas + generators.
-- 🟡 **M4 — Ecosystem** — ✅ Skills packs for Claude Code / Cursor / Codex. 🔜 cloud deploy templates, more TTS/STT/image providers, community marketplace
+- ✅ **M0 — Architecture + skeleton** — IR contract, monorepo, toolchain, DESIGN.md
+- ✅ **M1 — End-to-end MVP** — HTML + Chrome + ElevenLabs + mux + CLI
+- ✅ **M2 — Multiple frontends + agent** — JSON5 DSL, TikTok per-word captions, MCP server
+- ✅ **M3 — Multiple backends** — BeginFrame CDP, FFmpeg fast path (xfade chain), parallel segments, WAAPI cross-fade on Chrome
+- ✅ **M4a — TTS product consumption** — BYO audio/timings, whisper.cpp integration, standalone `stt` + `captions` CLIs, end-to-end GPU-TTS intro demo
+- 🟡 **M4b — Ecosystem polish** — ✅ Skills packs (`/reelforge`, `/reelforge-dsl`, `/reelforge-cli`); 🔜 cloud deploy templates (Lambda / Docker), Canvas-generator frontend, Remotion-style WebCodecs renderer
 
 Full roadmap in [DESIGN.md §11](./DESIGN.md#11-路线图).
 

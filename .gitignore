@@ -42,6 +42,8 @@ Thumbs.db
 *.mov
 *.mkv
 *.avi
+# Large uncompressed TTS intermediates — keep mp3 alongside demos, never WAV
+*.wav
 
 # Stray files from shell commands accidentally redirecting to "-" as a path
 /-

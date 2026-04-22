@@ -9,7 +9,7 @@ import {
   wordTimingsToCaptions,
 } from '@reelforge/captions';
 import { compileHtmlFile } from '@reelforge/html';
-import { renderChrome } from '@reelforge/engine-chrome';
+import { renderChrome, renderChromeParallel } from '@reelforge/engine-chrome';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
 import { createWhisperCppProvider } from '@reelforge/providers-stt-whisper';
 import { createElevenLabsProvider } from '@reelforge/providers-tts-elevenlabs';
@@ -563,6 +563,11 @@ export const generateCommand = defineCommand({
       description: 'Keep the intermediate HTML + audio',
       default: false,
     },
+    parallelism: {
+      type: 'string',
+      description: 'Number of concurrent Chrome workers. 1 = single-process (default). 2-4 typically gives a 1.5-2x speedup.',
+      default: '1',
+    },
   },
   async run({ args }) {
     const configPath = resolvePath(args.config);
@@ -732,18 +737,37 @@ export const generateCommand = defineCommand({
     const compiled = await compileHtmlFile(htmlPath);
     const silentPath = join(workdir, 'silent.mp4');
     const progressEvery = Math.max(1, Math.floor(config.fps));
-    await renderChrome({
-      project: compiled.project,
-      htmlPath: compiled.htmlPath!,
-      outputPath: silentPath,
-      executablePath: chromePath,
-      ffmpegBinary: args.ffmpeg,
-      onProgress: ({ frame, total }) => {
-        if (frame % progressEvery === 0 || frame === total) {
-          process.stderr.write(`\r  frame ${frame}/${total}`);
-        }
-      },
-    });
+    const parallelism = Math.max(1, Number.parseInt(args.parallelism, 10) || 1);
+
+    if (parallelism > 1) {
+      console.error(`  parallelism=${parallelism}`);
+      await renderChromeParallel({
+        project: compiled.project,
+        htmlPath: compiled.htmlPath!,
+        outputPath: silentPath,
+        executablePath: chromePath,
+        ffmpegBinary: args.ffmpeg,
+        parallelism,
+        onProgress: ({ frame, total }: { frame: number; total: number; shard: number }) => {
+          if (frame % progressEvery === 0 || frame === total) {
+            process.stderr.write(`\r  frame ${frame}/${total}`);
+          }
+        },
+      });
+    } else {
+      await renderChrome({
+        project: compiled.project,
+        htmlPath: compiled.htmlPath!,
+        outputPath: silentPath,
+        executablePath: chromePath,
+        ffmpegBinary: args.ffmpeg,
+        onProgress: ({ frame, total }) => {
+          if (frame % progressEvery === 0 || frame === total) {
+            process.stderr.write(`\r  frame ${frame}/${total}`);
+          }
+        },
+      });
+    }
     process.stderr.write('\n');
 
     console.error(`→ muxing audio`);

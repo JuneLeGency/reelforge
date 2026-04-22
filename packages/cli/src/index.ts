@@ -1,9 +1,11 @@
 import { defineCommand } from 'citty';
+import { captionsCommand } from './commands/captions';
 import { generateCommand } from './commands/generate';
 import { initCommand } from './commands/init';
 import { mcpCommand } from './commands/mcp';
 import { previewCommand } from './commands/preview';
 import { renderCommand } from './commands/render';
+import { sttCommand } from './commands/stt';
 import { ttsCommand } from './commands/tts';
 
 export const main = defineCommand({
@@ -17,17 +19,21 @@ export const main = defineCommand({
     preview: previewCommand,
     render: renderCommand,
     tts: ttsCommand,
+    stt: sttCommand,
+    captions: captionsCommand,
     generate: generateCommand,
     mcp: mcpCommand,
   },
 });
 
 export {
+  captionsCommand,
   generateCommand,
   initCommand,
   mcpCommand,
   previewCommand,
   renderCommand,
+  sttCommand,
   ttsCommand,
 };
 export {

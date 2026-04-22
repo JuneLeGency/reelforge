@@ -33,14 +33,27 @@ export function buildDslHtml(project: DslProject): BuildDslHtmlResult {
   project.clips.forEach((clip, ci) => {
     const t = clipTimes[ci]!;
     const rawTransition = clip.transition ?? defaultTransition;
-    // A transition on the *outgoing* clip only makes sense when there's
-    // a next clip to blend into. Skip it on the last clip.
+    const isFirst = ci === 0;
     const isLast = ci === project.clips.length - 1;
+    // A transition on clip[i] drives blending from clip[i] INTO clip[i+1].
+    // That means:
+    //   - clip[i]  gets data-rf-transition-out   (this clip's own `transition`, if not the last clip)
+    //   - clip[i+1] gets data-rf-transition-in   (inherited from clip[i], if prev had a transition)
+    //     The in + out pair is what makes Chrome's runtime overlap opacity curves into a real cross-fade.
     const outgoing =
       rawTransition && rawTransition !== 'none' && !isLast ? rawTransition : null;
-    const transitionAttrs = outgoing
-      ? ` data-rf-transition-out="${escapeAttr(outgoing)}" data-rf-transition-out-ms="${DEFAULT_TRANSITION_MS}"`
-      : '';
+    const prevTransition = isFirst
+      ? undefined
+      : (project.clips[ci - 1]!.transition ?? defaultTransition);
+    const incoming =
+      prevTransition && prevTransition !== 'none' && !isFirst ? prevTransition : null;
+    const transitionAttrs =
+      (outgoing
+        ? ` data-rf-transition-out="${escapeAttr(outgoing)}" data-rf-transition-out-ms="${DEFAULT_TRANSITION_MS}"`
+        : '') +
+      (incoming
+        ? ` data-rf-transition-in="${escapeAttr(incoming)}" data-rf-transition-in-ms="${DEFAULT_TRANSITION_MS}"`
+        : '');
     clip.layers.forEach((layer, li) => {
       if (layer.type === 'image') {
         const fit = layer.fit ?? 'cover';

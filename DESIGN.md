@@ -644,35 +644,57 @@ export async function scriptToVideo(input: ScriptInput, opts: PipelineOpts): Pro
 
 ## 11. 路线图
 
-### M0 — 架构与骨架(1 周)
-- [ ] 本 DESIGN.md 定稿。
-- [ ] Monorepo 骨架 + 工具链。
-- [ ] `@reelforge/ir` 包:完整类型 + Zod schema + 100% 类型测试。
+> 状态标记:✅ 完成 / 🟡 部分完成 / 🔜 计划中 / 💤 延后
 
-### M1 — 端到端最小可运行(2-3 周)
-- [ ] `@reelforge/html` HTML 前端 parser → IR。
-- [ ] `@reelforge/engine-chrome` Puppeteer + BeginFrame(Linux)/ fallback(其它平台)+ image2pipe。
-- [ ] `@reelforge/mux` 音频 mix + ffmpeg。
-- [ ] `@reelforge/providers-tts-elevenlabs` + `@reelforge/providers-stt-whisper-cpp`。
-- [ ] `@reelforge/captions`(Caption model + TikTok pagination)。
-- [ ] `@reelforge/cli`: `reelforge init / preview / render`(短别名 `rf`)。
-- [ ] **Demo: "一句话 → slide+旁白+字幕" 能跑通**。
+### M0 — 架构与骨架 ✅
+- [x] 本 DESIGN.md 定稿。
+- [x] Monorepo 骨架 + 工具链。
+- [x] `@reelforge/ir` 包:完整类型 + Zod schema + 12 单测。
 
-### M2 — 多前端(2 周)
-- [ ] `@reelforge/dsl` JSON5 前端。
-- [ ] `@reelforge/agent` skills + `@reelforge/mcp` server。
-- [ ] ScriptGenerator + Image provider(至少 SDXL 本地)。
+### M1 — 端到端最小可运行 ✅
+- [x] `@reelforge/html` HTML 前端 parser → IR,支持 `data-rf-transition-{in,out}`。
+- [x] `@reelforge/engine-chrome` Puppeteer + image2pipe + BeginFrame CDP(opt-in)+ 并行帧段 + 图片/视频/WAAPI adapter。
+- [x] `@reelforge/mux` 音频 mix + ffmpeg(atrim/adelay/amix)+ 可选 libass 烧字幕。
+- [x] `@reelforge/providers-tts-elevenlabs` +(M4a)`@reelforge/providers-stt-whisper`。
+- [x] `@reelforge/captions`(Caption model + TikTok 词级分页 + SRT / Whisper JSON 解析)。
+- [x] `@reelforge/cli`:`reelforge init / preview / render / tts / stt / captions / generate / mcp`。
+- [x] **Demo: "一句话 → slide+旁白+字幕" 闭环**(hello-world, narration-demo)。
 
-### M3 — 多后端(3 周)
-- [ ] `@reelforge/engine-ffmpeg` fast path + RendererRouter。
-- [ ] `@reelforge/engine-canvas` + `@reelforge/script` TS 生成器前端。
-- [ ] `@reelforge/parallel` 本地多进程。
+### M2 — 多前端 + Agent 集成 ✅
+- [x] `@reelforge/dsl` JSON5 前端(editly 风格 clip/layer/title/audio + transition)。
+- [x] `@reelforge/mcp` MCP stdio server + 4 个工具(compile_html / compile_dsl / compile_dsl_inline / plan_duration)。
+- [x] Skills 包:`skills/reelforge/`, `skills/reelforge-dsl/`, `skills/reelforge-cli/`。
+- [x] `generate` pipeline 支持 TikTok 词级高亮。
+- 💤 ScriptGenerator + LLM → 脚本:延后,外部 LLM 直接喂 narration 文本即可,不需要包装。
 
-### M4 — 生态与部署(按需)
-- [ ] Lambda / Cloud Run 部署模板。
-- [ ] 更多 provider(Azure/OpenAI TTS、F5-TTS、Flux、Comfy)。
-- [ ] WebCodecs 后端。
-- [ ] 社区 skill marketplace 格式定稿。
+### M3 — 多后端 + 性能 ✅
+- [x] `@reelforge/engine-ffmpeg` 纯 ffmpeg 快路径 — 检测 IR fast-path eligible 时走 `filter_complex` + overlay/enable,13× 提速。
+- [x] `@reelforge/transitions` xfade 目录(46 名 + 20 别名),engine-ffmpeg 支持 xfade chain 自动连接。
+- [x] engine-chrome 并行帧段(`renderChromeParallel`)—  短视频有效,长视频 laptop 上反效果(文档已注明)。
+- [x] engine-chrome WAAPI cross-fade transitions — `data-rf-transition-{in,out}` 成对的 image 会注入 WAAPI opacity 动画,相邻 fade window 重叠形成真 cross-fade。
+- [x] BeginFrame CDP opt-in(`--use-begin-frame`)。
+- 💤 `@reelforge/engine-canvas` + `@reelforge/script` TS 生成器前端 — 延后,HTML + DSL + MCP 三前端已覆盖大部分创作场景,motion-canvas 风格收益有限。
+
+### M4a — TTS 产物消费(核心,重新聚焦)✅
+> 方向:Reelforge 不做 TTS 生产,专注**消费 TTS 产物**。用户可以用任何服务(ElevenLabs、Azure、VoxCPM2、IndexTTS2、Qwen-TTS…)产生音频,Reelforge 对齐、切片、出片。
+
+- [x] `generate` 三模式:synthesize(ElevenLabs)/ byo-full(audio + timings)/ byo-whisper(audio → whisper.cpp 自动转录)。
+- [x] `@reelforge/captions/parse-timings` — SRT(per-word 或 phrase-level)+ Whisper JSON 两种格式解析,字符比例填充缺时间戳。
+- [x] `reelforge stt <audio>` 独立命令 — whisper.cpp 转录到 SRT / Whisper JSON / TXT。
+- [x] `reelforge captions <file>` 工具集 — info / srt / json / tiktok 格式互转 + 时间戳摘要。
+- [x] End-to-end 验证(examples/intro-demo):47.64 s 中文自我介绍,VoxCPM2 GPU 合成音频,DSL→IR→Chrome 渲染,句级字幕 + TikTok 词高亮,全链路闭环。
+
+### M4b — 生态与部署 🟡
+- [x] Skills 三件套(reelforge / reelforge-dsl / reelforge-cli)。
+- 🔜 Cloud deploy 模板(Lambda / Docker / Cloud Run)— 先需要一个真实部署 case 来驱动。
+- 🔜 更多 provider:Azure/OpenAI TTS、F5-TTS、Flux、Comfy。优先级按用户反馈。
+- 🔜 WebCodecs 后端 — 浏览器内全链路渲染,真正的零依赖。
+- 💤 社区 skill marketplace 格式 — 等 skills 生态本身标准化后再定。
+
+### 已知待修 / 小票
+- [ ] engine-chrome 长视频 `--parallelism` 在 laptop 上性能负回退(文档已警告),理想的修法是改走 frame-range work-stealing,而不是 N 独立 Chrome。
+- [ ] WAAPI 字幕用 TikTok 模式时的色彩过渡在 low-power 设备上有 1-2 帧的抖动;需要定位是不是 Chrome 的 compositor thread 问题。
+- [ ] `reelforge stt` 在 whisper.cpp 本机未装时应给出更友好的诊断(现在只是说 `Missing whisper configuration`)。
 
 ---
 
