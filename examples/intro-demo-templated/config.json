@@ -1,0 +1,18 @@
+{
+  "audio": "../intro-demo/narration.mp3",
+  "timings": "../intro-demo/narration.srt",
+  "template": "hero-fade-up",
+  "slides": [
+    { "title": "Reelforge", "subtitle": "程序化视频生成框架" },
+    { "title": "三个核心设计", "subtitle": "IR · 多前端 · 多后端" },
+    { "title": "多种创作方式", "subtitle": "HTML · JSON · 代码 · Agent" },
+    { "title": "VideoProject IR", "subtitle": "统一中间表示" },
+    { "title": "智能后端路由", "subtitle": "FFmpeg · Chrome · WebCodecs" },
+    { "title": "消费 TTS 产物", "subtitle": "BYO 音频 · Whisper 自动转录" },
+    { "title": "WAAPI 字幕", "subtitle": "无需 libass · 全 ffmpeg 可用" },
+    { "title": "流水线闭环", "subtitle": "从脚本到成片" }
+  ],
+  "width": 1280,
+  "height": 720,
+  "fps": 30
+}

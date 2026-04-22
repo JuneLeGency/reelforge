@@ -13,6 +13,13 @@ import { renderChrome, renderChromeParallel } from '@reelforge/engine-chrome';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
 import { createWhisperCppProvider } from '@reelforge/providers-stt-whisper';
 import { createElevenLabsProvider } from '@reelforge/providers-tts-elevenlabs';
+import {
+  listTemplateNames,
+  renderTemplatedComposition,
+  resolveTemplate,
+  type BuildSlideInstance,
+} from '../slide-templates';
+import { listVisualStyleNames, resolveVisualStyle } from '../visual-styles';
 import { resolveChrome } from '../util/chrome';
 
 /**
@@ -27,6 +34,19 @@ import { resolveChrome } from '../util/chrome';
  * Callers may mix: `narration` present but `audio`/`timings` override →
  * reuse the script text for display metadata only (TTS is skipped).
  */
+/**
+ * One slide in templated mode. Every field except `template` is
+ * interpretive — each template picks the slots it cares about.
+ */
+export interface SlideContent {
+  /** Template name. If omitted, inherits the global `template` config key. */
+  template?: string | undefined;
+  title?: string | undefined;
+  subtitle?: string | undefined;
+  image?: string | undefined;
+  bullets?: readonly string[] | undefined;
+}
+
 export interface GenerateConfig {
   /** Narration text. Required in synthesize mode; optional decoration in byo mode. */
   narration?: string | undefined;
@@ -36,7 +56,14 @@ export interface GenerateConfig {
   audio?: string | undefined;
   /** Word-level timings file (SRT or Whisper JSON). Triggers byo mode. */
   timings?: string | undefined;
-  images: string[];
+  /** Plain image slides (original mode). Mutually exclusive with `slides`. */
+  images?: string[] | undefined;
+  /** Templated slides (new mode). Each may set its own `template`. */
+  slides?: SlideContent[] | undefined;
+  /** Global default template applied to every slide without its own. */
+  template?: string | undefined;
+  /** Named visual style (swiss-pulse, dark-premium, neon-electric, …). */
+  style?: string | undefined;
   apiKey?: string | undefined;
   modelId?: string | undefined;
   width: number;
@@ -56,13 +83,50 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
     throw new GenerateConfigError('config must be a JSON object');
   }
   const r = raw as Record<string, unknown>;
-  if (!Array.isArray(r.images) || r.images.length === 0) {
-    throw new GenerateConfigError('config.images must be a non-empty array');
+  const hasImagesField = Array.isArray(r.images);
+  const hasSlidesField = Array.isArray(r.slides);
+  const imagesLen = hasImagesField ? (r.images as unknown[]).length : 0;
+  const slidesLen = hasSlidesField ? (r.slides as unknown[]).length : 0;
+  if (imagesLen === 0 && slidesLen === 0) {
+    throw new GenerateConfigError(
+      'config.images or config.slides must be a non-empty array',
+    );
   }
-  for (const img of r.images) {
-    if (typeof img !== 'string' || img === '') {
-      throw new GenerateConfigError('config.images entries must be non-empty strings');
+  if (hasImagesField) {
+    for (const img of r.images as unknown[]) {
+      if (typeof img !== 'string' || img === '') {
+        throw new GenerateConfigError('config.images entries must be non-empty strings');
+      }
     }
+  }
+  if (hasSlidesField) {
+    for (const [i, entry] of (r.slides as unknown[]).entries()) {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+        throw new GenerateConfigError(`config.slides[${i}] must be an object`);
+      }
+      const s = entry as Record<string, unknown>;
+      for (const key of ['template', 'title', 'subtitle', 'image']) {
+        if (s[key] !== undefined && typeof s[key] !== 'string') {
+          throw new GenerateConfigError(`config.slides[${i}].${key} must be a string`);
+        }
+      }
+      if (s.bullets !== undefined) {
+        if (!Array.isArray(s.bullets)) {
+          throw new GenerateConfigError(`config.slides[${i}].bullets must be an array of strings`);
+        }
+        for (const b of s.bullets) {
+          if (typeof b !== 'string') {
+            throw new GenerateConfigError(`config.slides[${i}].bullets entries must be strings`);
+          }
+        }
+      }
+    }
+  }
+  if (r.template !== undefined && typeof r.template !== 'string') {
+    throw new GenerateConfigError('config.template must be a string');
+  }
+  if (r.style !== undefined && typeof r.style !== 'string') {
+    throw new GenerateConfigError('config.style must be a string');
   }
 
   const hasAudio = typeof r.audio === 'string' && r.audio !== '';
@@ -94,7 +158,14 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
   }
 
   return {
-    images: r.images as string[],
+    ...(hasImagesField ? { images: r.images as string[] } : {}),
+    ...(hasSlidesField ? { slides: r.slides as SlideContent[] } : {}),
+    ...(typeof r.template === 'string' && r.template !== ''
+      ? { template: r.template }
+      : {}),
+    ...(typeof r.style === 'string' && r.style !== ''
+      ? { style: r.style }
+      : {}),
     narration: hasNarration ? (r.narration as string) : undefined,
     voice: hasVoice ? (r.voice as string) : undefined,
     audio: hasAudio ? (r.audio as string) : undefined,
@@ -568,6 +639,14 @@ export const generateCommand = defineCommand({
       description: 'Number of concurrent Chrome workers. 1 = single-process (default). 2-4 typically gives a 1.5-2x speedup.',
       default: '1',
     },
+    template: {
+      type: 'string',
+      description: 'Slide template for images[] mode (hero-fade-up, ken-burns-zoom, bullet-stagger, split-reveal). Overrides config.template.',
+    },
+    style: {
+      type: 'string',
+      description: 'Visual style (swiss-pulse, dark-premium, neon-electric, warm-editorial, mint-fresh, terminal-green). Overrides config.style.',
+    },
   },
   async run({ args }) {
     const configPath = resolvePath(args.config);
@@ -685,16 +764,44 @@ export const generateCommand = defineCommand({
     }
 
     const sentences = splitSentences(wordTimings);
-    const resolvedImages = config.images.map((img) => resolvePath(configDir, img));
-    const stagedImages: string[] = [];
-    for (let i = 0; i < resolvedImages.length; i++) {
-      const src = resolvedImages[i]!;
-      const ext = extname(src) || '.png';
-      const dest = join(workdir, `asset_${i}${ext}`);
-      await copyFile(src, dest);
-      stagedImages.push(basename(dest));
+
+    // Decide slide mode:
+    //   - config.slides[]  → templated mode (each slide specs its own template)
+    //   - config.images[] + (--template / config.template) → templated mode
+    //     with one slide per image
+    //   - config.images[] alone → original <img>-only mode (unchanged)
+    const cliTemplate =
+      typeof args.template === 'string' && args.template !== '' ? args.template : undefined;
+    const globalTemplate = cliTemplate ?? config.template;
+    if (globalTemplate && !resolveTemplate(globalTemplate)) {
+      console.error(
+        `Unknown template "${globalTemplate}". Available: ${listTemplateNames().join(', ')}`,
+      );
+      process.exit(2);
     }
-    const slides = assignSlides(sentences, stagedImages);
+
+    const useTemplated = Boolean(
+      config.slides && config.slides.length > 0
+        ? true
+        : config.images && config.images.length > 0 && globalTemplate,
+    );
+
+    // Stage assets (image files need to live in the workdir so the
+    // generated HTML can reference them with a relative path).
+    const stagedImageByOriginal = new Map<string, string>();
+    const stageImage = async (originalPath: string): Promise<string> => {
+      if (stagedImageByOriginal.has(originalPath)) {
+        return stagedImageByOriginal.get(originalPath)!;
+      }
+      const src = resolvePath(configDir, originalPath);
+      const ext = extname(src) || '.png';
+      const idx = stagedImageByOriginal.size;
+      const dest = join(workdir, `asset_${idx}${ext}`);
+      await copyFile(src, dest);
+      const staged = basename(dest);
+      stagedImageByOriginal.set(originalPath, staged);
+      return staged;
+    };
 
     const audioFile = `narration${audioExt}`;
     const audioPath = join(workdir, audioFile);
@@ -712,26 +819,121 @@ export const generateCommand = defineCommand({
       tiktokPages = pages;
     }
 
+    let slidesCount = 0;
     const htmlPath = join(workdir, 'index.html');
-    await writeFile(
-      htmlPath,
-      buildGenerateHtml({
+
+    if (useTemplated) {
+      // Build BuildSlideInstance[] by pairing sentences with slide content.
+      const inputs: Array<{
+        template: string;
+        title?: string;
+        subtitle?: string;
+        image?: string;
+        bullets?: readonly string[];
+      }> = [];
+
+      if (config.slides && config.slides.length > 0) {
+        for (const s of config.slides) {
+          const template = s.template ?? globalTemplate;
+          if (!template) {
+            console.error(
+              `slide missing template (both slide.template and config.template are unset)`,
+            );
+            process.exit(2);
+          }
+          if (!resolveTemplate(template)) {
+            console.error(
+              `Unknown slide template "${template}". Available: ${listTemplateNames().join(', ')}`,
+            );
+            process.exit(2);
+          }
+          const stagedImage = s.image ? await stageImage(s.image) : undefined;
+          inputs.push({
+            template,
+            ...(s.title !== undefined ? { title: s.title } : {}),
+            ...(s.subtitle !== undefined ? { subtitle: s.subtitle } : {}),
+            ...(stagedImage !== undefined ? { image: stagedImage } : {}),
+            ...(s.bullets !== undefined ? { bullets: s.bullets } : {}),
+          });
+        }
+      } else if (config.images && config.images.length > 0 && globalTemplate) {
+        // Every image becomes a slide using the global template. Title /
+        // subtitle are left empty — the template decides whether to show
+        // them at all (ken-burns-zoom is a good default for this mode).
+        for (const img of config.images) {
+          const staged = await stageImage(img);
+          inputs.push({ template: globalTemplate, image: staged });
+        }
+      }
+
+      // Pair sentences with inputs, cycling if counts don't match.
+      const templated: BuildSlideInstance[] = sentences.map((s, i) => {
+        const content = inputs[i % inputs.length]!;
+        return {
+          template: content.template,
+          startMs: s.startMs,
+          endMs: s.endMs,
+          ...(content.title !== undefined ? { title: content.title } : {}),
+          ...(content.subtitle !== undefined ? { subtitle: content.subtitle } : {}),
+          ...(content.image !== undefined ? { image: content.image } : {}),
+          ...(content.bullets !== undefined ? { bullets: content.bullets } : {}),
+        };
+      });
+      slidesCount = templated.length;
+
+      const cliStyle =
+        typeof args.style === 'string' && args.style !== '' ? args.style : undefined;
+      const styleName = cliStyle ?? config.style;
+      if (styleName && !resolveVisualStyle(styleName)) {
+        console.error(
+          `Unknown visual style "${styleName}". Available: ${listVisualStyleNames().join(', ')}`,
+        );
+        process.exit(2);
+      }
+      const html = renderTemplatedComposition({
         width: config.width,
         height: config.height,
         fps: config.fps,
-        slides,
+        totalDurationMs: audioDurationMs,
+        slides: templated,
         audioRelative: audioFile,
         audioDurationMs,
+        ...(styleName ? { style: styleName } : {}),
         ...(args.noCaptions
           ? {}
           : tiktokPages
             ? { tikTokPages: tiktokPages }
             : { captions: sentenceCaps }),
-      }),
-    );
+      });
+      await writeFile(htmlPath, html);
+    } else {
+      // Original images-only mode, unchanged.
+      const images = config.images!;
+      for (const img of images) {
+        await stageImage(img);
+      }
+      const slides = assignSlides(sentences, images.map((img) => stagedImageByOriginal.get(img)!));
+      slidesCount = slides.length;
+      await writeFile(
+        htmlPath,
+        buildGenerateHtml({
+          width: config.width,
+          height: config.height,
+          fps: config.fps,
+          slides,
+          audioRelative: audioFile,
+          audioDurationMs,
+          ...(args.noCaptions
+            ? {}
+            : tiktokPages
+              ? { tikTokPages: tiktokPages }
+              : { captions: sentenceCaps }),
+        }),
+      );
+    }
 
     console.error(
-      `→ rendering ${config.width}x${config.height} @ ${config.fps}fps, ${sentences.length} sentence(s) → ${slides.length} slide(s)`,
+      `→ rendering ${config.width}x${config.height} @ ${config.fps}fps, ${sentences.length} sentence(s) → ${slidesCount} slide(s)${useTemplated ? ` (template: ${globalTemplate ?? 'per-slide'})` : ''}`,
     );
 
     const compiled = await compileHtmlFile(htmlPath);

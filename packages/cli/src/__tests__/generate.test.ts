@@ -70,6 +70,52 @@ describe('parseGenerateConfig', () => {
     ).toThrow(/config\.audio is required/);
   });
 
+  test('accepts config.slides instead of config.images', () => {
+    const c = parseGenerateConfig({
+      narration: 'hi',
+      voice: 'v',
+      slides: [
+        { template: 'hero-fade-up', title: 'Hello', subtitle: 'World' },
+        { template: 'bullet-stagger', title: 'Three', bullets: ['a', 'b', 'c'] },
+      ],
+    });
+    expect(c.slides).toHaveLength(2);
+    expect(c.images).toBeUndefined();
+  });
+
+  test('accepts config.template as global default', () => {
+    const c = parseGenerateConfig({
+      narration: 'hi',
+      voice: 'v',
+      images: ['a.png', 'b.png'],
+      template: 'ken-burns-zoom',
+    });
+    expect(c.template).toBe('ken-burns-zoom');
+  });
+
+  test('rejects config with neither images nor slides', () => {
+    expect(() =>
+      parseGenerateConfig({ narration: 'hi', voice: 'v' }),
+    ).toThrow(/images or config\.slides/);
+  });
+
+  test('rejects slide entries with wrong-typed fields', () => {
+    expect(() =>
+      parseGenerateConfig({
+        narration: 'hi',
+        voice: 'v',
+        slides: [{ template: 'hero-fade-up', title: 123 }],
+      }),
+    ).toThrow(/slides\[0\]\.title must be a string/);
+    expect(() =>
+      parseGenerateConfig({
+        narration: 'hi',
+        voice: 'v',
+        slides: [{ template: 'hero-fade-up', bullets: 'not-an-array' }],
+      }),
+    ).toThrow(/bullets must be an array/);
+  });
+
   test('narration text may accompany byo mode as metadata', () => {
     const c = parseGenerateConfig({
       narration: 'The script text (display only)',
