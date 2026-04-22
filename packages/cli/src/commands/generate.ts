@@ -905,19 +905,46 @@ export const generateCommand = defineCommand({
             process.exit(2);
           }
           const stagedImage = s.image ? await stageImage(s.image) : undefined;
+          // image-grid / ui-3d-reveal bullets may be image paths — stage
+          // anything that looks like one so the workdir copy uses a
+          // relative filename the rendered HTML can actually resolve.
+          let bullets = s.bullets;
+          if (bullets && (template === 'image-grid' || template === 'ui-3d-reveal')) {
+            const stagedBullets: string[] = [];
+            for (const b of bullets) {
+              if (/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(b)) {
+                stagedBullets.push(await stageImage(b));
+              } else {
+                stagedBullets.push(b);
+              }
+            }
+            bullets = stagedBullets;
+          }
+          // extras with image paths (photo-card.eyebrow, pip.pipImage,
+          // testimonial.*) — scan for anything that ends in a known image
+          // ext and stage it. Keeps config authors from having to copy
+          // assets manually.
+          let extras = s.extras;
+          if (extras) {
+            const stagedExtras: Record<string, string | number | undefined> = { ...extras };
+            for (const [k, v] of Object.entries(stagedExtras)) {
+              if (typeof v === 'string' && /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(v)) {
+                stagedExtras[k] = await stageImage(v);
+              }
+            }
+            extras = stagedExtras;
+          }
           inputs.push({
             template,
             ...(s.title !== undefined ? { title: s.title } : {}),
             ...(s.subtitle !== undefined ? { subtitle: s.subtitle } : {}),
             ...(stagedImage !== undefined ? { image: stagedImage } : {}),
-            ...(s.bullets !== undefined ? { bullets: s.bullets } : {}),
+            ...(bullets !== undefined ? { bullets } : {}),
             ...(s.transition !== undefined ? { transition: s.transition } : {}),
             ...(s.transitionDurationMs !== undefined
               ? { transitionDurationMs: s.transitionDurationMs }
               : {}),
-            ...(s.extras !== undefined
-              ? { extras: { ...s.extras } as Record<string, string | number | undefined> }
-              : {}),
+            ...(extras !== undefined ? { extras } : {}),
           });
         }
       } else if (config.images && config.images.length > 0 && globalTemplate) {

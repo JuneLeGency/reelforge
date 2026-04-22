@@ -9,6 +9,8 @@ import { dataGrid, DATA_GRID_CSS } from './data-grid';
 import { endCard, END_CARD_CSS } from './end-card';
 import { flowchart, FLOWCHART_CSS } from './flowchart';
 import { gradientBg, GRADIENT_BG_CSS } from './gradient-bg';
+import { imageGrid, IMAGE_GRID_CSS } from './image-grid';
+import { ui3dReveal, UI_3D_REVEAL_CSS } from './ui-3d-reveal';
 import { musicCard, MUSIC_CARD_CSS } from './music-card';
 import { newsTitle, NEWS_TITLE_CSS } from './news-title';
 import { socialFollow, SOCIAL_FOLLOW_CSS } from './social-follow';
@@ -60,6 +62,8 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'social-follow': socialFollow,
   'music-card': musicCard,
   flowchart: flowchart,
+  'ui-3d-reveal': ui3dReveal,
+  'image-grid': imageGrid,
 };
 
 /**
@@ -96,6 +100,8 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'social-follow': SOCIAL_FOLLOW_CSS,
   'music-card': MUSIC_CARD_CSS,
   flowchart: FLOWCHART_CSS,
+  'ui-3d-reveal': UI_3D_REVEAL_CSS,
+  'image-grid': IMAGE_GRID_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {

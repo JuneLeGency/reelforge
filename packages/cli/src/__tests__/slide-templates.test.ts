@@ -11,10 +11,12 @@ import {
   endCard,
   flowchart,
   gradientBg,
+  imageGrid,
   musicCard,
   newsTitle,
   socialFollow,
   splitCompare,
+  ui3dReveal,
   heroFadeUp,
   imageLeftText,
   imageRightText,
@@ -49,6 +51,7 @@ describe('SLIDE_TEMPLATES registry', () => {
       'flowchart',
       'gradient-bg',
       'hero-fade-up',
+      'image-grid',
       'image-left-text',
       'image-right-text',
       'ken-burns-zoom',
@@ -65,6 +68,7 @@ describe('SLIDE_TEMPLATES registry', () => {
       'split-reveal',
       'testimonial',
       'timeline-roadmap',
+      'ui-3d-reveal',
     ]);
   });
 
@@ -103,6 +107,142 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('social-follow')).toBe(socialFollow);
     expect(resolveTemplate('music-card')).toBe(musicCard);
     expect(resolveTemplate('flowchart')).toBe(flowchart);
+    expect(resolveTemplate('ui-3d-reveal')).toBe(ui3dReveal);
+    expect(resolveTemplate('image-grid')).toBe(imageGrid);
+  });
+});
+
+describe('ui3dReveal template', () => {
+  test('renders halo + perspective card + copy with image when provided', () => {
+    const out = ui3dReveal({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'New Release',
+      subtitle: 'v0.0.0',
+      image: 'ui.png',
+    });
+    expect(out.html).toContain('class="halo"');
+    expect(out.html).toContain('class="perspective"');
+    expect(out.html).toContain('class="card"');
+    expect(out.html).toContain('src="ui.png"');
+    expect(out.html).toContain('class="title"');
+  });
+
+  test('card flips from -48deg rotateY to 0 by default', () => {
+    const out = ui3dReveal({ index: 0, startMs: 0, endMs: 5000, title: 'x' });
+    const card = out.animations.find((a) => a.selector.endsWith('.card'))!;
+    expect(card.keyframes[0]!.props.transform).toContain('rotateY(-48deg)');
+    expect(
+      card.keyframes.find(
+        (kf) => kf.props.transform === 'rotateX(0deg) rotateY(0deg) translateZ(0px)',
+      ),
+    ).toBeDefined();
+  });
+
+  test('extras.angle overrides default', () => {
+    const out = ui3dReveal({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'x',
+      extras: { angle: 30 },
+    });
+    const card = out.animations.find((a) => a.selector.endsWith('.card'))!;
+    expect(card.keyframes[0]!.props.transform).toContain('rotateY(-30deg)');
+  });
+});
+
+describe('imageGrid template', () => {
+  test('renders one tile per bullet; chooses column count by total', () => {
+    const out = imageGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Gallery',
+      bullets: ['a.png', 'b.png', 'c.png', 'd.png'],
+    });
+    expect((out.html.match(/class="tile"/g) || []).length).toBe(4);
+    expect(out.html).toContain('grid-template-columns: repeat(2, 1fr)');
+  });
+
+  test('6 tiles → 3 columns; 10 tiles → 4 columns', () => {
+    const six = imageGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: Array.from({ length: 6 }, (_v, i) => `${i}.png`),
+    });
+    expect(six.html).toContain('grid-template-columns: repeat(3, 1fr)');
+    const ten = imageGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: Array.from({ length: 10 }, (_v, i) => `${i}.png`),
+    });
+    expect(ten.html).toContain('grid-template-columns: repeat(4, 1fr)');
+  });
+
+  test('non-path bullets render as placeholder tiles', () => {
+    const out = imageGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: ['a.png', 'plain text', 'c.jpg'],
+    });
+    expect((out.html.match(/class="placeholder"/g) || []).length).toBe(1);
+    expect(out.html).toContain('>plain text<');
+  });
+
+  test('extras.columns forces column count within [2, 5]', () => {
+    const out = imageGrid({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: ['a.png', 'b.png', 'c.png'],
+      extras: { columns: 5 },
+    });
+    expect(out.html).toContain('grid-template-columns: repeat(5, 1fr)');
+  });
+});
+
+describe('pictureInPicture extras.blurBg', () => {
+  test('sets inline blur on the bg img when extras.blurBg is a number', async () => {
+    const { pictureInPicture } = await import('../slide-templates');
+    const out = pictureInPicture({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'demo',
+      image: 'hero.jpg',
+      extras: { pipImage: 'face.jpg', blurBg: 12 },
+    });
+    expect(out.html).toContain('filter: blur(12px)');
+    expect(out.html).toContain('has-blur-bg');
+  });
+
+  test('extras.blurBg = "true" falls back to default 8px', async () => {
+    const { pictureInPicture } = await import('../slide-templates');
+    const out = pictureInPicture({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      image: 'h.jpg',
+      extras: { blurBg: 'true' },
+    });
+    expect(out.html).toContain('filter: blur(8px)');
+  });
+
+  test('blurBg omitted → no filter applied', async () => {
+    const { pictureInPicture } = await import('../slide-templates');
+    const out = pictureInPicture({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      image: 'h.jpg',
+    });
+    expect(out.html).not.toContain('filter: blur');
+    expect(out.html).not.toContain('has-blur-bg');
   });
 });
 

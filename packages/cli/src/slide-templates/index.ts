@@ -34,3 +34,5 @@ export { audioWaveform, AUDIO_WAVEFORM_CSS } from './audio-waveform';
 export { socialFollow, SOCIAL_FOLLOW_CSS } from './social-follow';
 export { musicCard, MUSIC_CARD_CSS } from './music-card';
 export { flowchart, FLOWCHART_CSS } from './flowchart';
+export { ui3dReveal, UI_3D_REVEAL_CSS } from './ui-3d-reveal';
+export { imageGrid, IMAGE_GRID_CSS } from './image-grid';

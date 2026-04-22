@@ -19,6 +19,16 @@ export const pictureInPicture: SlideTemplate = (spec: SlideSpec): SlideRenderOut
   const subtitle = spec.subtitle ?? '';
   const image = spec.image ?? '';
   const pipImage = String(spec.extras?.pipImage ?? '');
+  // When extras.blurBg is truthy, the main image gets a blur filter
+  // (to keep focus on the pip window and any overlay text). The pip
+  // window itself stays sharp.
+  const blurRaw = spec.extras?.blurBg;
+  const blurPx = (() => {
+    if (blurRaw === undefined || blurRaw === '' || blurRaw === 'false' || blurRaw === 0) return 0;
+    const n = typeof blurRaw === 'number' ? blurRaw : Number.parseFloat(String(blurRaw));
+    if (Number.isFinite(n)) return Math.max(0, Math.min(40, n));
+    return 8; // default when extras.blurBg is "true" / truthy non-number
+  })();
 
   const FADE_MS = 400;
   const inStart = startMs;
@@ -27,9 +37,10 @@ export const pictureInPicture: SlideTemplate = (spec: SlideSpec): SlideRenderOut
   const outEnd = endMs;
 
   const id = `slide-${index}`;
+  const bgStyle = blurPx > 0 ? ` style="filter: blur(${blurPx}px);"` : '';
   const html = `
-  <section class="slide slide-pip" id="${id}" data-slide-index="${index}">
-    ${image !== '' ? `<img class="bg" src="${escapeAttr(image)}" alt="">` : ''}
+  <section class="slide slide-pip${blurPx > 0 ? ' has-blur-bg' : ''}" id="${id}" data-slide-index="${index}">
+    ${image !== '' ? `<img class="bg" src="${escapeAttr(image)}" alt=""${bgStyle}>` : ''}
     ${title !== '' || subtitle !== '' ? `<div class="titleblock">
       ${title !== '' ? `<h1 class="title">${escapeText(title)}</h1>` : ''}
       ${subtitle !== '' ? `<div class="subtitle">${escapeText(subtitle)}</div>` : ''}
