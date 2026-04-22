@@ -33,6 +33,7 @@
         "@reelforge/ir": "workspace:*",
         "@reelforge/mcp": "workspace:*",
         "@reelforge/mux": "workspace:*",
+        "@reelforge/providers-stt-whisper": "workspace:*",
         "@reelforge/providers-tts-elevenlabs": "workspace:*",
         "citty": "^0.1.6",
       },
@@ -96,6 +97,13 @@
         "@reelforge/ir": "workspace:*",
       },
     },
+    "packages/providers-stt-whisper": {
+      "name": "@reelforge/providers-stt-whisper",
+      "version": "0.0.0",
+      "dependencies": {
+        "@reelforge/captions": "workspace:*",
+      },
+    },
     "packages/providers-tts-elevenlabs": {
       "name": "@reelforge/providers-tts-elevenlabs",
       "version": "0.0.0",
@@ -144,6 +152,8 @@
     "@reelforge/mcp": ["@reelforge/mcp@workspace:packages/mcp"],
 
     "@reelforge/mux": ["@reelforge/mux@workspace:packages/mux"],
+
+    "@reelforge/providers-stt-whisper": ["@reelforge/providers-stt-whisper@workspace:packages/providers-stt-whisper"],
 
     "@reelforge/providers-tts-elevenlabs": ["@reelforge/providers-tts-elevenlabs@workspace:packages/providers-tts-elevenlabs"],
 

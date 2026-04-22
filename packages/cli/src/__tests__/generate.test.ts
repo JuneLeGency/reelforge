@@ -28,16 +28,57 @@ describe('parseGenerateConfig', () => {
     });
   });
 
-  test('rejects missing narration', () => {
+  test('rejects synthesize mode missing narration', () => {
     expect(() => parseGenerateConfig({ images: ['a.png'], voice: 'v' })).toThrow(
-      GenerateConfigError,
+      /narration is required/,
     );
+  });
+
+  test('rejects synthesize mode missing voice', () => {
+    expect(() =>
+      parseGenerateConfig({ narration: 'hi', images: ['a.png'] }),
+    ).toThrow(/voice is required/);
   });
 
   test('rejects empty images array', () => {
     expect(() => parseGenerateConfig({ narration: 'x', images: [], voice: 'v' })).toThrow(
       GenerateConfigError,
     );
+  });
+
+  test('accepts byo mode: audio + timings without narration/voice', () => {
+    const c = parseGenerateConfig({
+      audio: './narration.mp3',
+      timings: './narration.srt',
+      images: ['a.png'],
+    });
+    expect(c.audio).toBe('./narration.mp3');
+    expect(c.timings).toBe('./narration.srt');
+    expect(c.narration).toBeUndefined();
+    expect(c.voice).toBeUndefined();
+  });
+
+  test('audio without timings is allowed at parse time (CLI may auto-transcribe)', () => {
+    const c = parseGenerateConfig({ audio: './n.mp3', images: ['a.png'] });
+    expect(c.audio).toBe('./n.mp3');
+    expect(c.timings).toBeUndefined();
+  });
+
+  test('timings without audio is rejected (pointless without an audio file)', () => {
+    expect(() =>
+      parseGenerateConfig({ timings: './n.srt', images: ['a.png'] }),
+    ).toThrow(/config\.audio is required/);
+  });
+
+  test('narration text may accompany byo mode as metadata', () => {
+    const c = parseGenerateConfig({
+      narration: 'The script text (display only)',
+      audio: './n.mp3',
+      timings: './n.json',
+      images: ['a.png'],
+    });
+    expect(c.narration).toBe('The script text (display only)');
+    expect(c.audio).toBe('./n.mp3');
   });
 
   test('propagates optional fields', () => {

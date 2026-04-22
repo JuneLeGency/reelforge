@@ -3,3 +3,4 @@ export * from './types';
 export * from './word-timings';
 export * from './tiktok';
 export * from './srt';
+export * from './parse-timings';

@@ -2,17 +2,41 @@ import { copyFile, mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promis
 import { basename, dirname, extname, join, resolve as resolvePath } from 'node:path';
 import { defineCommand } from 'citty';
 import type { Caption, TikTokPage, WordTiming } from '@reelforge/captions';
-import { captionsToSrt, createTikTokStyleCaptions, wordTimingsToCaptions } from '@reelforge/captions';
+import {
+  captionsToSrt,
+  createTikTokStyleCaptions,
+  parseTimingsText,
+  wordTimingsToCaptions,
+} from '@reelforge/captions';
 import { compileHtmlFile } from '@reelforge/html';
 import { renderChrome } from '@reelforge/engine-chrome';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
+import { createWhisperCppProvider } from '@reelforge/providers-stt-whisper';
 import { createElevenLabsProvider } from '@reelforge/providers-tts-elevenlabs';
 import { resolveChrome } from '../util/chrome';
 
+/**
+ * Two shapes are accepted:
+ *
+ * 1. "synthesize" mode — call ElevenLabs to produce audio + timings:
+ *    `{ narration, voice, images, ... }`
+ *
+ * 2. "byo" mode — user-supplied audio + timings:
+ *    `{ audio, timings, images, ... }`
+ *
+ * Callers may mix: `narration` present but `audio`/`timings` override →
+ * reuse the script text for display metadata only (TTS is skipped).
+ */
 export interface GenerateConfig {
-  narration: string;
+  /** Narration text. Required in synthesize mode; optional decoration in byo mode. */
+  narration?: string | undefined;
+  /** ElevenLabs voice id. Required in synthesize mode; ignored in byo mode. */
+  voice?: string | undefined;
+  /** Pre-rendered audio file (mp3/wav/ogg). Triggers byo mode. */
+  audio?: string | undefined;
+  /** Word-level timings file (SRT or Whisper JSON). Triggers byo mode. */
+  timings?: string | undefined;
   images: string[];
-  voice: string;
   apiKey?: string | undefined;
   modelId?: string | undefined;
   width: number;
@@ -32,9 +56,6 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
     throw new GenerateConfigError('config must be a JSON object');
   }
   const r = raw as Record<string, unknown>;
-  if (typeof r.narration !== 'string' || r.narration.trim() === '') {
-    throw new GenerateConfigError('config.narration must be a non-empty string');
-  }
   if (!Array.isArray(r.images) || r.images.length === 0) {
     throw new GenerateConfigError('config.images must be a non-empty array');
   }
@@ -43,13 +64,41 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
       throw new GenerateConfigError('config.images entries must be non-empty strings');
     }
   }
-  if (typeof r.voice !== 'string' || r.voice === '') {
-    throw new GenerateConfigError('config.voice is required');
+
+  const hasAudio = typeof r.audio === 'string' && r.audio !== '';
+  const hasTimings = typeof r.timings === 'string' && r.timings !== '';
+  const hasNarration = typeof r.narration === 'string' && r.narration.trim() !== '';
+  const hasVoice = typeof r.voice === 'string' && r.voice !== '';
+
+  // config.timings without config.audio is never useful — the audio file is
+  // needed to actually play the narration in the rendered video.
+  if (hasTimings && !hasAudio) {
+    throw new GenerateConfigError('config.audio is required when config.timings is present');
   }
+
+  // config.audio without config.timings is allowed — the CLI may supply
+  // --timings, or auto-transcribe via whisper. Run-time logic validates.
+
+  if (!hasAudio && !hasTimings) {
+    // Synthesize mode requires narration + voice.
+    if (!hasNarration) {
+      throw new GenerateConfigError(
+        'config.narration is required when no pre-rendered audio/timings are supplied',
+      );
+    }
+    if (!hasVoice) {
+      throw new GenerateConfigError(
+        'config.voice is required when no pre-rendered audio/timings are supplied',
+      );
+    }
+  }
+
   return {
-    narration: r.narration,
     images: r.images as string[],
-    voice: r.voice,
+    narration: hasNarration ? (r.narration as string) : undefined,
+    voice: hasVoice ? (r.voice as string) : undefined,
+    audio: hasAudio ? (r.audio as string) : undefined,
+    timings: hasTimings ? (r.timings as string) : undefined,
     apiKey: typeof r.apiKey === 'string' ? r.apiKey : undefined,
     modelId: typeof r.modelId === 'string' ? r.modelId : undefined,
     width: typeof r.width === 'number' ? r.width : 1280,
@@ -445,12 +494,13 @@ function escapeText(s: string): string {
 export const generateCommand = defineCommand({
   meta: {
     name: 'generate',
-    description: 'Generate a video from a script + images via ElevenLabs TTS',
+    description:
+      'Generate a video. Two modes: synthesize (narration + voice → ElevenLabs TTS) or byo (pre-rendered audio + word-level timings).',
   },
   args: {
     config: {
       type: 'positional',
-      description: 'JSON config file (narration, images, voice, ...)',
+      description: 'JSON config file',
       required: true,
     },
     output: {
@@ -458,6 +508,14 @@ export const generateCommand = defineCommand({
       alias: 'o',
       description: 'Output MP4 path',
       default: 'out/video.mp4',
+    },
+    audio: {
+      type: 'string',
+      description: 'Pre-rendered audio file — switches to byo mode, overrides config.audio',
+    },
+    timings: {
+      type: 'string',
+      description: 'Word-level timings file (SRT or Whisper JSON) — overrides config.timings',
     },
     chrome: {
       type: 'string',
@@ -470,7 +528,7 @@ export const generateCommand = defineCommand({
     },
     apiKey: {
       type: 'string',
-      description: 'ElevenLabs API key (else $ELEVENLABS_API_KEY)',
+      description: 'ElevenLabs API key (synthesize mode; else $ELEVENLABS_API_KEY)',
     },
     srt: {
       type: 'string',
@@ -512,9 +570,37 @@ export const generateCommand = defineCommand({
     const raw = JSON.parse(await readFile(configPath, 'utf8')) as unknown;
     const config = parseGenerateConfig(raw);
 
-    const apiKey = args.apiKey ?? config.apiKey ?? process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      console.error('Missing API key — pass --api-key or set ELEVENLABS_API_KEY.');
+    // CLI --audio / --timings override the config fields.
+    const audioOverride = typeof args.audio === 'string' ? args.audio : undefined;
+    const timingsOverride = typeof args.timings === 'string' ? args.timings : undefined;
+
+    const effectiveAudio = audioOverride ?? config.audio;
+    const effectiveTimings = timingsOverride ?? config.timings;
+
+    const whisperBinary: string | undefined =
+      typeof args.whisperBinary === 'string' && args.whisperBinary !== ''
+        ? args.whisperBinary
+        : process.env.WHISPER_BINARY;
+    const whisperModel: string | undefined =
+      typeof args.whisperModel === 'string' && args.whisperModel !== ''
+        ? args.whisperModel
+        : process.env.WHISPER_MODEL;
+    const whisperLang: string =
+      typeof args.whisperLang === 'string' ? args.whisperLang : '';
+    const canAutoTranscribe = Boolean(whisperBinary && whisperModel);
+
+    // Modes: byo-full (audio+timings) / byo-whisper (audio, auto-STT) / synthesize.
+    const byoMode = Boolean(effectiveAudio);
+    const needsWhisper = byoMode && !effectiveTimings;
+
+    if (effectiveTimings && !effectiveAudio) {
+      console.error('--timings / config.timings requires --audio / config.audio');
+      process.exit(2);
+    }
+    if (needsWhisper && !canAutoTranscribe) {
+      console.error(
+        'audio supplied without timings — pass --timings, or set --whisper-binary + --whisper-model (or $WHISPER_BINARY + $WHISPER_MODEL) for auto-transcription',
+      );
       process.exit(2);
     }
 
@@ -530,23 +616,70 @@ export const generateCommand = defineCommand({
     const workdir = resolvePath(dirname(outputPath), `__generate_${Date.now()}`);
     await mkdir(workdir, { recursive: true });
 
-    console.error(
-      `→ synthesizing narration (${config.narration.length} chars, voice=${config.voice})`,
-    );
-    const tts = createElevenLabsProvider({
-      apiKey,
-      ...(config.modelId ? { modelId: config.modelId } : {}),
-    });
-    const result = await tts.synthesize({
-      text: config.narration,
-      voice: config.voice,
-    });
-    if (!result.wordTimings || result.wordTimings.length === 0) {
-      console.error('ElevenLabs did not return word timings — cannot align slides.');
-      process.exit(3);
+    // Produce audioBuffer + wordTimings regardless of mode.
+    let audioBuffer: Buffer;
+    let audioExt: string;
+    let wordTimings: WordTiming[];
+    let audioDurationMs: number;
+
+    if (byoMode) {
+      const audioAbs = resolvePath(configDir, effectiveAudio!);
+      console.error(`→ loading audio ${audioAbs}`);
+      audioBuffer = await readFile(audioAbs);
+      audioExt = extname(audioAbs) || '.mp3';
+
+      if (effectiveTimings) {
+        const timingsAbs = resolvePath(configDir, effectiveTimings);
+        console.error(`→ parsing timings ${timingsAbs}`);
+        const timingsText = await readFile(timingsAbs, 'utf8');
+        wordTimings = parseTimingsText(timingsText);
+      } else {
+        console.error(`→ transcribing via whisper.cpp (${whisperBinary})`);
+        const stt = createWhisperCppProvider({
+          whisperBinary: whisperBinary!,
+          modelPath: whisperModel!,
+          ffmpegBinary: args.ffmpeg,
+        });
+        const sttResult = await stt.transcribe({
+          audioPath: audioAbs,
+          ...(whisperLang !== '' ? { language: whisperLang } : {}),
+        });
+        wordTimings = sttResult.wordTimings;
+      }
+
+      if (wordTimings.length === 0) {
+        console.error('No word-level timings produced — cannot align slides.');
+        process.exit(3);
+      }
+      audioDurationMs = wordTimings[wordTimings.length - 1]!.endMs;
+    } else {
+      const apiKey = args.apiKey ?? config.apiKey ?? process.env.ELEVENLABS_API_KEY;
+      if (!apiKey) {
+        console.error('Missing API key — pass --api-key or set ELEVENLABS_API_KEY.');
+        process.exit(2);
+      }
+      console.error(
+        `→ synthesizing narration (${config.narration!.length} chars, voice=${config.voice})`,
+      );
+      const tts = createElevenLabsProvider({
+        apiKey,
+        ...(config.modelId ? { modelId: config.modelId } : {}),
+      });
+      const result = await tts.synthesize({
+        text: config.narration!,
+        voice: config.voice!,
+      });
+      if (!result.wordTimings || result.wordTimings.length === 0) {
+        console.error('ElevenLabs did not return word timings — cannot align slides.');
+        process.exit(3);
+      }
+      audioBuffer = result.audio;
+      audioExt = '.mp3';
+      wordTimings = result.wordTimings;
+      audioDurationMs = result.durationMs;
     }
 
-    const sentences = splitSentences(result.wordTimings);
+    const sentences = splitSentences(wordTimings);
     const resolvedImages = config.images.map((img) => resolvePath(configDir, img));
     const stagedImages: string[] = [];
     for (let i = 0; i < resolvedImages.length; i++) {
@@ -558,13 +691,14 @@ export const generateCommand = defineCommand({
     }
     const slides = assignSlides(sentences, stagedImages);
 
-    const audioPath = join(workdir, 'narration.mp3');
-    await writeFile(audioPath, result.audio);
+    const audioFile = `narration${audioExt}`;
+    const audioPath = join(workdir, audioFile);
+    await writeFile(audioPath, audioBuffer);
 
     const sentenceCaps = sentenceCaptions(sentences);
     let tiktokPages: TikTokPage[] | undefined;
     if (!args.noCaptions && args.tiktokCaptions) {
-      const wordCaps = wordTimingsToCaptions(result.wordTimings);
+      const wordCaps = wordTimingsToCaptions(wordTimings);
       const thresholdMs = Number.parseInt(args.tiktokThreshold, 10);
       const { pages } = createTikTokStyleCaptions({
         captions: wordCaps,
@@ -581,8 +715,8 @@ export const generateCommand = defineCommand({
         height: config.height,
         fps: config.fps,
         slides,
-        audioRelative: 'narration.mp3',
-        audioDurationMs: result.durationMs,
+        audioRelative: audioFile,
+        audioDurationMs,
         ...(args.noCaptions
           ? {}
           : tiktokPages
@@ -639,7 +773,7 @@ export const generateCommand = defineCommand({
     }
 
     if (args.srt) {
-      const captions = wordTimingsToCaptions(result.wordTimings);
+      const captions = wordTimingsToCaptions(wordTimings);
       await writeFile(resolvePath(args.srt), captionsToSrt(captions), 'utf8');
       console.error(`✓ ${resolvePath(args.srt)} (${captions.length} word captions)`);
     }

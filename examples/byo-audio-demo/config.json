@@ -1,0 +1,11 @@
+{
+  "audio": "./narration.mp3",
+  "timings": "./narration.srt",
+  "images": [
+    "../fastpath-demo/slide-a.png",
+    "../fastpath-demo/slide-b.png"
+  ],
+  "width": 1280,
+  "height": 720,
+  "fps": 30
+}
