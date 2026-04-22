@@ -69,6 +69,54 @@ export const RUNTIME_SCRIPT = String.raw`
       });
     }
 
+    // Three.js adapter — compositions dispatch "rf-seek" on window with
+    // detail = ctx.timeSec / ctx.timeMs, and update their three Clock or
+    // per-mesh transforms from that handler. We also expose a mutable
+    // window.__rf.threeTime for scenes that poll. No assumption about the
+    // three.js instance — the composition owns it.
+    if (typeof window !== 'undefined' && typeof window.CustomEvent === 'function') {
+      window.__rf.registerAdapter({
+        name: 'three',
+        seek: function (ctx) {
+          window.__rf.threeTime = ctx.timeMs;
+          try {
+            window.dispatchEvent(new CustomEvent('rf-seek', {
+              detail: { timeMs: ctx.timeMs, timeSec: ctx.timeSec }
+            }));
+          } catch (e) { /* noop */ }
+        },
+      });
+    }
+
+    // Lottie adapter — the composition registers each Lottie instance by
+    // pushing it onto window.__rf.lottie. Each entry is either a lottie-web
+    // AnimationItem (has goToAndStop + totalFrames + frameRate) or a plain
+    // { anim, startMs, durationMs } object for time-scoped playback.
+    if (typeof window !== 'undefined') {
+      window.__rf.lottie = window.__rf.lottie || [];
+      window.__rf.registerAdapter({
+        name: 'lottie',
+        seek: function (ctx) {
+          var instances = window.__rf.lottie;
+          for (var i = 0; i < instances.length; i++) {
+            try {
+              var entry = instances[i];
+              var anim = entry && entry.anim ? entry.anim : entry;
+              if (!anim || typeof anim.goToAndStop !== 'function') continue;
+              var frameRate = anim.frameRate || 30;
+              var totalFrames = anim.totalFrames || 0;
+              var startMs = entry && typeof entry.startMs === 'number' ? entry.startMs : 0;
+              var localMs = ctx.timeMs - startMs;
+              if (localMs < 0) localMs = 0;
+              var frame = (localMs / 1000) * frameRate;
+              if (totalFrames > 0 && frame > totalFrames - 1) frame = totalFrames - 1;
+              anim.goToAndStop(frame, true);
+            } catch (e) { /* noop */ }
+          }
+        },
+      });
+    }
+
     if (typeof document !== 'undefined') {
       var timedImages = Array.prototype.slice.call(
         document.querySelectorAll('img[data-start][data-duration]')

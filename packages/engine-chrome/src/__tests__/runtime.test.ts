@@ -32,9 +32,11 @@ describe('RUNTIME_SCRIPT', () => {
     expect(typeof rf.seekFrame).toBe('function');
     expect(rf.ready).toBe(true);
     expect(Array.isArray(rf.adapters)).toBe(true);
-    // WAAPI adapter got auto-registered because document.getAnimations exists.
-    // No video adapter since querySelectorAll returns [].
-    expect(rf.adapters).toHaveLength(1);
+    // WAAPI auto-registered (document.getAnimations exists) + lottie (always
+    // registered when window is available). No video/three/image since their
+    // feature checks fail in this mock.
+    const names = (rf.adapters as Array<{ name: string }>).map((a) => a.name).sort();
+    expect(names).toEqual(['lottie', 'waapi']);
   });
 
   test('seekFrame invokes each adapter, swallows errors, and returns a Promise', async () => {
@@ -79,6 +81,120 @@ describe('RUNTIME_SCRIPT', () => {
     await rf.seekFrame(1500);
     expect(bag.ctx).toEqual({ timeMs: 1500, timeSec: 1.5 });
     expect(bag.asyncDone).toBe(true);
+  });
+
+  test('registers a three.js adapter that sets __rf.threeTime and dispatches rf-seek', () => {
+    const dispatched: Array<{ type: string; detail: unknown }> = [];
+    class FakeCustomEvent {
+      type: string;
+      detail: unknown;
+      constructor(type: string, init?: { detail?: unknown }) {
+        this.type = type;
+        this.detail = init?.detail;
+      }
+    }
+    const w: Record<string, unknown> = {
+      CustomEvent: FakeCustomEvent,
+      dispatchEvent: (evt: { type: string; detail: unknown }) => {
+        dispatched.push({ type: evt.type, detail: evt.detail });
+        return true;
+      },
+    };
+    const doc = {
+      readyState: 'complete',
+      getAnimations: undefined,
+      querySelectorAll: () => [],
+    };
+    // Provide CustomEvent to the new Function sandbox explicitly — it's
+    // referenced as an unscoped identifier by runtime.ts.
+    const fn = new Function(
+      'window',
+      'document',
+      'console',
+      'addEventListener',
+      'CustomEvent',
+      RUNTIME_SCRIPT,
+    );
+    fn(w, doc, { warn: () => undefined }, () => undefined, FakeCustomEvent);
+    const rf = w.__rf as {
+      adapters: Array<{ name: string }>;
+      seekFrame: (ms: number) => Promise<unknown>;
+      threeTime?: number;
+    };
+    expect(rf.adapters.find((a) => a.name === 'three')).toBeDefined();
+    rf.seekFrame(1500);
+    expect(rf.threeTime).toBe(1500);
+    const seekEvents = dispatched.filter((e) => e.type === 'rf-seek');
+    expect(seekEvents.length).toBeGreaterThanOrEqual(1);
+    expect((seekEvents[0]!.detail as { timeMs: number }).timeMs).toBe(1500);
+  });
+
+  test('lottie adapter calls goToAndStop per registered instance', () => {
+    const calls: Array<{ frame: number; name: string }> = [];
+    const makeAnim = (name: string, frameRate: number, totalFrames: number) => ({
+      frameRate,
+      totalFrames,
+      goToAndStop: (frame: number) => {
+        calls.push({ frame, name });
+      },
+    });
+    const w: Record<string, unknown> = {};
+    const doc = {
+      readyState: 'complete',
+      getAnimations: undefined,
+      querySelectorAll: () => [],
+    };
+    const fn = new Function(
+      'window',
+      'document',
+      'console',
+      'addEventListener',
+      'CustomEvent',
+      RUNTIME_SCRIPT,
+    );
+    fn(w, doc, { warn: () => undefined }, () => undefined, undefined);
+    const rf = w.__rf as {
+      lottie: unknown[];
+      seekFrame: (ms: number) => Promise<unknown>;
+      adapters: Array<{ name: string }>;
+    };
+    expect(rf.adapters.find((a) => a.name === 'lottie')).toBeDefined();
+    rf.lottie.push(makeAnim('plain', 30, 60));
+    rf.lottie.push({ anim: makeAnim('scoped', 30, 60), startMs: 500 });
+    rf.seekFrame(1000);
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toEqual({ frame: 30, name: 'plain' });
+    expect(calls[1]).toEqual({ frame: 15, name: 'scoped' });
+  });
+
+  test('lottie adapter clamps frame to totalFrames - 1', () => {
+    const calls: number[] = [];
+    const anim = {
+      frameRate: 30,
+      totalFrames: 30,
+      goToAndStop: (frame: number) => {
+        calls.push(frame);
+      },
+    };
+    const w: Record<string, unknown> = {};
+    const doc = {
+      readyState: 'complete',
+      getAnimations: undefined,
+      querySelectorAll: () => [],
+    };
+    const fn = new Function(
+      'window',
+      'document',
+      'console',
+      'addEventListener',
+      'CustomEvent',
+      RUNTIME_SCRIPT,
+    );
+    fn(w, doc, { warn: () => undefined }, () => undefined, undefined);
+    const rf = w.__rf as { lottie: unknown[]; seekFrame: (ms: number) => Promise<unknown> };
+    rf.lottie.push(anim);
+    rf.seekFrame(100_000);
+    expect(calls).toEqual([29]);
   });
 
   test('fade images install a WAAPI animation and are excluded from the simple visibility adapter', () => {

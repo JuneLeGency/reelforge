@@ -13,22 +13,21 @@
 |---|---|---|---|
 | WAAPI library-clock seek | ✅ | ✅ | `engine-chrome` 的 WAAPI adapter 每帧 `currentTime = frameMs` |
 | GSAP library-clock seek | ✅ | ✅ | `engine-chrome` 的 GSAP adapter |
-| Three.js / Lottie adapters | 🔜 | ✅ | 只需加 adapter,不改架构 |
+| Three.js adapter | ✅ | ✅ | `rf-seek` CustomEvent + `window.__rf.threeTime` |
+| Lottie adapter | ✅ | ✅ | `window.__rf.lottie` 注册表,自动 `goToAndStop` |
 | 确定性帧捕获 (BeginFrame CDP) | ✅ (opt-in) | ✅ | `--use-begin-frame` |
 | Chrome 全 HTML 合成 | ✅ | ✅ | 一样 |
 | FFmpeg fast path | ✅ | ❌ | Reelforge 独有,13× 加速 |
 | 字幕 DOM 渲染 | ✅ | ✅ | 两家都不用 libass |
 | TikTok 词级高亮 | ✅ | ✅ | 能力对等 |
 
-### 1.2 真能力差距
+### 1.2 真能力差距(持续更新)
 
 | 能力 | Reelforge | Hyperframes | Remotion | 补齐成本 |
 |---|---|---|---|---|
-| Three.js adapter | ❌ | ✅ | 手动 | 低 — ~100 行 runtime 注入 |
-| Lottie adapter | ❌ | ✅ | 第三方库 | 低 — 复用 `lottie-web` |
 | Shader transitions(自带 gl-transitions) | ❌ | ✅ (`shader-transitions` 包) | ❌ | 中 — WebGL + 47 个 shader |
 | Audio-reactive 特效(beat detection) | ❌ | ✅ (registry blocks) | 第三方 | 中 — web audio + FFT + event hooks |
-| **每元素独立 entrance 动画 DSL 描述** | ❌ | ✅ | ✅ (React props) | **中** — DSL schema + 模板库 |
+| **每元素独立 entrance 动画 DSL 描述** | ✅ (slide templates + visual styles) | ✅ | ✅ (React props) | 完成 — `@reelforge/cli/slide-templates/` |
 | 多场景 sub-composition | ❌ | ✅ (`data-composition-id`) | ✅ (`<Composition>`) | 中 — IR 支持嵌套 Timeline |
 | 帧对帧声音反应(audio-visualizer) | ❌ | ✅ | ✅ | 中 |
 | 远端渲染(Lambda / Cloud Run 一键部署) | ❌ | ❌ (单机) | ✅ (商业) | 高 |
