@@ -9,8 +9,11 @@ import {
   dataChartReveal,
   dataGrid,
   endCard,
+  flowchart,
   gradientBg,
+  musicCard,
   newsTitle,
+  socialFollow,
   splitCompare,
   heroFadeUp,
   imageLeftText,
@@ -43,6 +46,7 @@ describe('SLIDE_TEMPLATES registry', () => {
       'data-chart-reveal',
       'data-grid',
       'end-card',
+      'flowchart',
       'gradient-bg',
       'hero-fade-up',
       'image-left-text',
@@ -51,10 +55,12 @@ describe('SLIDE_TEMPLATES registry', () => {
       'kinetic-type',
       'logo-outro',
       'lower-third',
+      'music-card',
       'news-title',
       'photo-card',
       'picture-in-picture',
       'quote-card',
+      'social-follow',
       'split-compare',
       'split-reveal',
       'testimonial',
@@ -94,6 +100,125 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('chart-line')).toBe(chartLine);
     expect(resolveTemplate('chart-pie')).toBe(chartPie);
     expect(resolveTemplate('audio-waveform')).toBe(audioWaveform);
+    expect(resolveTemplate('social-follow')).toBe(socialFollow);
+    expect(resolveTemplate('music-card')).toBe(musicCard);
+    expect(resolveTemplate('flowchart')).toBe(flowchart);
+  });
+});
+
+describe('socialFollow template', () => {
+  test('defaults to github branding when platform not specified', () => {
+    const out = socialFollow({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: '@reelforge',
+      subtitle: 'open-source video framework',
+    });
+    expect(out.html).toContain('platform-github');
+    expect(out.html).toContain('>GitHub<');
+    expect(out.html).toContain('Star on GitHub');
+  });
+
+  test('youtube platform applies the signature red brand + "Subscribe" cta', () => {
+    const out = socialFollow({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: '@Reelforge',
+      extras: { platform: 'youtube' },
+    });
+    expect(out.html).toContain('platform-youtube');
+    expect(out.html).toContain('#ff0033');
+    expect(out.html).toContain('>Subscribe<');
+  });
+
+  test('cta override wins', () => {
+    const out = socialFollow({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: '@x',
+      extras: { platform: 'x', cta: 'Say hi' },
+    });
+    expect(out.html).toContain('>Say hi<');
+  });
+});
+
+describe('musicCard template', () => {
+  test('renders album art + metadata + progress bar', () => {
+    const out = musicCard({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Night Drive',
+      subtitle: 'Reelforge OST',
+      extras: { album: 'Vol. 1', duration: '3:42', platform: 'SPOTIFY' },
+    });
+    expect(out.html).toContain('class="art"');
+    expect(out.html).toContain('>NOW PLAYING<');
+    expect(out.html).toContain('class="track"');
+    expect(out.html).toContain('>Night Drive<');
+    expect(out.html).toContain('>Reelforge OST<');
+    expect(out.html).toContain('>Vol. 1<');
+    expect(out.html).toContain('>3:42<');
+    expect(out.html).toContain('>SPOTIFY<');
+    expect(out.html).toContain('class="progress-fill"');
+  });
+
+  test('progress-fill scales from 0 → 1 across the slide', () => {
+    const out = musicCard({ index: 0, startMs: 0, endMs: 5000, title: 'x' });
+    const p = out.animations.find((a) => a.selector.endsWith('.progress-fill'))!;
+    expect(p.keyframes[0]!.props.transform).toBe('scaleX(0)');
+    expect(p.keyframes.find((kf) => kf.props.transform === 'scaleX(1)')).toBeDefined();
+  });
+});
+
+describe('flowchart template', () => {
+  test('parses root + branches from "label | leaf" bullets', () => {
+    const out = flowchart({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Decide',
+      bullets: ['Run tests?', 'yes | ship', 'no | fix'],
+    });
+    expect(out.html).toContain('class="root"');
+    expect(out.html).toContain('>Run tests?<');
+    expect((out.html.match(/class="leaf"/g) || []).length).toBe(2);
+    expect(out.html).toContain('>ship<');
+    expect(out.html).toContain('>fix<');
+    expect((out.html.match(/class="edge" data-i=/g) || []).length).toBe(2);
+    // Edge labels
+    expect(out.html).toContain('>yes<');
+    expect(out.html).toContain('>no<');
+  });
+
+  test('arrow-chain mode ("A -> B -> C") produces a vertical chain', () => {
+    const out = flowchart({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      bullets: ['step A -> step B -> step C'],
+    });
+    // Root = first, 2 leaves beneath it
+    expect(out.html).toContain('>step A<');
+    expect((out.html.match(/class="leaf"/g) || []).length).toBe(2);
+  });
+
+  test('edges draw via stroke-dashoffset → 0 with 260 ms stagger', () => {
+    const out = flowchart({
+      index: 0,
+      startMs: 0,
+      endMs: 6000,
+      bullets: ['Q?', 'a | left', 'b | right', 'c | down'],
+    });
+    const starts = out.animations
+      .filter((a) => /\.edge\[data-i="\d+"\]$/.test(a.selector))
+      .map((a) => a.keyframes[1]!.atMs)
+      .sort((a, b) => a - b);
+    expect(starts[1]! - starts[0]!).toBe(260);
+    expect(starts[2]! - starts[1]!).toBe(260);
   });
 });
 

@@ -31,3 +31,6 @@ export { gradientBg, GRADIENT_BG_CSS } from './gradient-bg';
 export { chartLine, CHART_LINE_CSS } from './chart-line';
 export { chartPie, CHART_PIE_CSS } from './chart-pie';
 export { audioWaveform, AUDIO_WAVEFORM_CSS } from './audio-waveform';
+export { socialFollow, SOCIAL_FOLLOW_CSS } from './social-follow';
+export { musicCard, MUSIC_CARD_CSS } from './music-card';
+export { flowchart, FLOWCHART_CSS } from './flowchart';

@@ -7,8 +7,11 @@ import { codeBlock, CODE_BLOCK_CSS } from './code-block';
 import { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
 import { dataGrid, DATA_GRID_CSS } from './data-grid';
 import { endCard, END_CARD_CSS } from './end-card';
+import { flowchart, FLOWCHART_CSS } from './flowchart';
 import { gradientBg, GRADIENT_BG_CSS } from './gradient-bg';
+import { musicCard, MUSIC_CARD_CSS } from './music-card';
 import { newsTitle, NEWS_TITLE_CSS } from './news-title';
+import { socialFollow, SOCIAL_FOLLOW_CSS } from './social-follow';
 import { heroFadeUp, HERO_FADE_UP_CSS } from './hero-fade-up';
 import {
   imageLeftText,
@@ -54,6 +57,9 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'chart-line': chartLine,
   'chart-pie': chartPie,
   'audio-waveform': audioWaveform,
+  'social-follow': socialFollow,
+  'music-card': musicCard,
+  flowchart: flowchart,
 };
 
 /**
@@ -87,6 +93,9 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'chart-line': CHART_LINE_CSS,
   'chart-pie': CHART_PIE_CSS,
   'audio-waveform': AUDIO_WAVEFORM_CSS,
+  'social-follow': SOCIAL_FOLLOW_CSS,
+  'music-card': MUSIC_CARD_CSS,
+  flowchart: FLOWCHART_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {
