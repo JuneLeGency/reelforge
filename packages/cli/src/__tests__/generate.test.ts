@@ -116,6 +116,43 @@ describe('parseGenerateConfig', () => {
     ).toThrow(/bullets must be an array/);
   });
 
+  test('accepts per-slide transition + transitionDurationMs', () => {
+    const c = parseGenerateConfig({
+      narration: 'hi',
+      voice: 'v',
+      slides: [
+        {
+          template: 'hero-fade-up',
+          title: 'A',
+          transition: 'flash-white',
+          transitionDurationMs: 500,
+        },
+        { template: 'hero-fade-up', title: 'B' },
+      ],
+    });
+    expect(c.slides![0]!.transition).toBe('flash-white');
+    expect(c.slides![0]!.transitionDurationMs).toBe(500);
+  });
+
+  test('rejects wrong-typed transition fields', () => {
+    expect(() =>
+      parseGenerateConfig({
+        narration: 'hi',
+        voice: 'v',
+        slides: [{ template: 'hero-fade-up', transition: 42 }],
+      }),
+    ).toThrow(/transition must be a string/);
+    expect(() =>
+      parseGenerateConfig({
+        narration: 'hi',
+        voice: 'v',
+        slides: [
+          { template: 'hero-fade-up', transitionDurationMs: 'soon' },
+        ],
+      }),
+    ).toThrow(/transitionDurationMs must be a finite number/);
+  });
+
   test('narration text may accompany byo mode as metadata', () => {
     const c = parseGenerateConfig({
       narration: 'The script text (display only)',

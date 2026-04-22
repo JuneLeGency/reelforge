@@ -1,6 +1,11 @@
 import type { Caption, TikTokPage } from '@reelforge/captions';
+import {
+  listChromeEffects,
+  resolveChromeEffect,
+  type ChromeEffectAnimation,
+} from '@reelforge/transitions';
 import type { SlideAnimation, SlideSpec } from './types';
-import { resolveTemplate } from './registry';
+import { listTemplateNames, resolveTemplate } from './registry';
 import { escapeAttr, escapeText } from './escape';
 import { listVisualStyleNames, resolveVisualStyle, type VisualStyle } from '../visual-styles';
 
@@ -23,6 +28,18 @@ export interface BuildSlideInstance {
   extras?: Record<string, string | number | undefined> | undefined;
 }
 
+export interface TransitionEvent {
+  /**
+   * Effect name — a key in @reelforge/transitions CHROME_EFFECTS
+   * (e.g. 'flash-white', 'flash-black', 'wipe-sweep', 'radial-pulse').
+   */
+  name: string;
+  /** Center point on the composition timeline, in ms. */
+  atMs: number;
+  /** Visible duration of the effect, in ms. */
+  durationMs: number;
+}
+
 export interface RenderCompositionOptions {
   width: number;
   height: number;
@@ -42,6 +59,12 @@ export interface RenderCompositionOptions {
   captions?: readonly Caption[] | undefined;
   /** TikTok-paged captions — takes priority over `captions` when present. */
   tikTokPages?: readonly TikTokPage[] | undefined;
+  /**
+   * Optional inter-slide transition effects. Each event plays once at
+   * `atMs` (center) for `durationMs`. Unknown effect names throw with
+   * a helpful message listing available effects.
+   */
+  transitions?: readonly TransitionEvent[] | undefined;
   title?: string | undefined;
 }
 
@@ -61,6 +84,7 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
     audioDurationMs,
     captions,
     tikTokPages,
+    transitions,
   } = opts;
   const docTitle = opts.title ?? 'Reelforge generated video';
 
@@ -117,7 +141,7 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
   if (unknownTemplates.length > 0) {
     throw new Error(
       `Unknown slide template(s): ${[...new Set(unknownTemplates)].join(', ')}. ` +
-        `Expected one of: hero-fade-up, ken-burns-zoom, bullet-stagger, split-reveal.`,
+        `Expected one of: ${listTemplateNames().join(', ')}.`,
     );
   }
 
@@ -131,6 +155,42 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
     // O(slides).
     const probe = template({ index: 0, startMs: 0, endMs: 1 });
     cssParts.push(probe.css);
+  }
+
+  // Resolve transition effects: CSS deduped by string identity (so
+  // effects like flash-white + flash-black, which share a CSS block,
+  // only emit it once), HTML overlays one per event, and WAAPI
+  // animations folded into the same plan as slide animations.
+  const effectCssSet = new Set<string>();
+  const effectHtmlParts: string[] = [];
+  const effectAnimPlans: Array<{ selector: string; animation: ChromeEffectAnimation }> = [];
+  const unknownEffects: string[] = [];
+  if (transitions && transitions.length > 0) {
+    for (let i = 0; i < transitions.length; i++) {
+      const ev = transitions[i]!;
+      const fx = resolveChromeEffect(ev.name);
+      if (!fx) {
+        unknownEffects.push(ev.name);
+        continue;
+      }
+      effectCssSet.add(fx.css);
+      const out = fx.emit({
+        id: `t${i}`,
+        atMs: ev.atMs,
+        durationMs: ev.durationMs,
+        totalDurationMs,
+      });
+      effectHtmlParts.push(out.html);
+      for (const anim of out.animations) {
+        effectAnimPlans.push({ selector: anim.selector, animation: anim });
+      }
+    }
+  }
+  if (unknownEffects.length > 0) {
+    throw new Error(
+      `Unknown Chrome effect(s): ${[...new Set(unknownEffects)].join(', ')}. ` +
+        `Available: ${listChromeEffects().join(', ')}.`,
+    );
   }
 
   // Captions overlay (mirrors buildGenerateHtml shape).
@@ -156,16 +216,26 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
   // Build the per-animation <script>. Keyframes are translated from
   // absolute ms to WAAPI offsets (0..1) inside the browser, not here —
   // simpler to serialise, and keeps the template code readable.
-  const animsJson = JSON.stringify(
-    animationPlans.map((p) => ({
+  const combinedPlans: Array<{
+    selector: string;
+    easing: string;
+    keyframes: Array<{ atMs: number; props: Record<string, string | number> }>;
+  }> = [];
+  for (const p of animationPlans) {
+    combinedPlans.push({
       selector: p.selector,
       easing: p.animation.easing ?? 'linear',
-      keyframes: p.animation.keyframes.map((kf) => ({
-        atMs: kf.atMs,
-        props: kf.props,
-      })),
-    })),
-  );
+      keyframes: p.animation.keyframes.map((kf) => ({ atMs: kf.atMs, props: kf.props })),
+    });
+  }
+  for (const p of effectAnimPlans) {
+    combinedPlans.push({
+      selector: p.selector,
+      easing: p.animation.easing ?? 'linear',
+      keyframes: p.animation.keyframes.map((kf) => ({ atMs: kf.atMs, props: kf.props })),
+    });
+  }
+  const animsJson = JSON.stringify(combinedPlans);
 
   const audioTag =
     audioRelative && audioDurationMs
@@ -185,6 +255,7 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
     .slide .title { font-family: ${fontFamilyHeading}; }
     .slide .subtitle { font-family: ${fontFamilyBody}; }
 ${cssParts.join('\n')}
+${[...effectCssSet].join('\n')}
 ${overlayCss}
 ${styleExtraCss}
   </style>
@@ -192,6 +263,7 @@ ${styleExtraCss}
 <body>
   <div id="stage">
 ${parts.join('\n')}
+${effectHtmlParts.join('\n')}
 ${overlayHtml}
 ${audioTag}
   </div>
@@ -243,6 +315,7 @@ const CAPTION_CSS = `
     opacity: 0;
     pointer-events: none;
     white-space: pre-wrap;
+    z-index: 1000;
   }
 `;
 
@@ -261,6 +334,7 @@ const TIKTOK_CSS = `
     opacity: 0;
     pointer-events: none;
     white-space: pre-wrap;
+    z-index: 1000;
   }
   .tt-token {
     display: inline-block;

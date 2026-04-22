@@ -1,5 +1,6 @@
 import { defineCommand } from 'citty';
 import { captionsCommand } from './commands/captions';
+import { composeCommand } from './commands/compose';
 import { generateCommand } from './commands/generate';
 import { initCommand } from './commands/init';
 import { mcpCommand } from './commands/mcp';
@@ -22,12 +23,14 @@ export const main = defineCommand({
     stt: sttCommand,
     captions: captionsCommand,
     generate: generateCommand,
+    compose: composeCommand,
     mcp: mcpCommand,
   },
 });
 
 export {
   captionsCommand,
+  composeCommand,
   generateCommand,
   initCommand,
   mcpCommand,
@@ -44,6 +47,11 @@ export {
   parseGenerateConfig,
   GenerateConfigError,
 } from './commands/generate';
+export {
+  parseComposeConfig,
+  buildConcatList,
+  ComposeConfigError,
+} from './commands/compose';
 export { scaffoldHello, ScaffoldError } from './commands/init';
 export {
   HOT_RELOAD_SNIPPET,

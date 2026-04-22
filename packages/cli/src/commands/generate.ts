@@ -13,11 +13,13 @@ import { renderChrome, renderChromeParallel } from '@reelforge/engine-chrome';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
 import { createWhisperCppProvider } from '@reelforge/providers-stt-whisper';
 import { createElevenLabsProvider } from '@reelforge/providers-tts-elevenlabs';
+import { listChromeEffects, resolveChromeEffect } from '@reelforge/transitions';
 import {
   listTemplateNames,
   renderTemplatedComposition,
   resolveTemplate,
   type BuildSlideInstance,
+  type TransitionEvent,
 } from '../slide-templates';
 import { listVisualStyleNames, resolveVisualStyle } from '../visual-styles';
 import { resolveChrome } from '../util/chrome';
@@ -45,6 +47,15 @@ export interface SlideContent {
   subtitle?: string | undefined;
   image?: string | undefined;
   bullets?: readonly string[] | undefined;
+  /**
+   * Chrome-path transition effect fired at this slide's *end* boundary
+   * (i.e. at slides[i].endMs, the moment slide i+1 takes over). Must
+   * be a name in @reelforge/transitions CHROME_EFFECTS.
+   * Ignored on the last slide since there's nothing after it.
+   */
+  transition?: string | undefined;
+  /** Transition duration in ms. Default 400. */
+  transitionDurationMs?: number | undefined;
 }
 
 export interface GenerateConfig {
@@ -105,7 +116,7 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
         throw new GenerateConfigError(`config.slides[${i}] must be an object`);
       }
       const s = entry as Record<string, unknown>;
-      for (const key of ['template', 'title', 'subtitle', 'image']) {
+      for (const key of ['template', 'title', 'subtitle', 'image', 'transition']) {
         if (s[key] !== undefined && typeof s[key] !== 'string') {
           throw new GenerateConfigError(`config.slides[${i}].${key} must be a string`);
         }
@@ -119,6 +130,14 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
             throw new GenerateConfigError(`config.slides[${i}].bullets entries must be strings`);
           }
         }
+      }
+      if (
+        s.transitionDurationMs !== undefined &&
+        (typeof s.transitionDurationMs !== 'number' || !Number.isFinite(s.transitionDurationMs))
+      ) {
+        throw new GenerateConfigError(
+          `config.slides[${i}].transitionDurationMs must be a finite number`,
+        );
       }
     }
   }
@@ -830,6 +849,8 @@ export const generateCommand = defineCommand({
         subtitle?: string;
         image?: string;
         bullets?: readonly string[];
+        transition?: string;
+        transitionDurationMs?: number;
       }> = [];
 
       if (config.slides && config.slides.length > 0) {
@@ -847,6 +868,12 @@ export const generateCommand = defineCommand({
             );
             process.exit(2);
           }
+          if (s.transition !== undefined && !resolveChromeEffect(s.transition)) {
+            console.error(
+              `Unknown transition effect "${s.transition}". Available: ${listChromeEffects().join(', ')}`,
+            );
+            process.exit(2);
+          }
           const stagedImage = s.image ? await stageImage(s.image) : undefined;
           inputs.push({
             template,
@@ -854,6 +881,10 @@ export const generateCommand = defineCommand({
             ...(s.subtitle !== undefined ? { subtitle: s.subtitle } : {}),
             ...(stagedImage !== undefined ? { image: stagedImage } : {}),
             ...(s.bullets !== undefined ? { bullets: s.bullets } : {}),
+            ...(s.transition !== undefined ? { transition: s.transition } : {}),
+            ...(s.transitionDurationMs !== undefined
+              ? { transitionDurationMs: s.transitionDurationMs }
+              : {}),
           });
         }
       } else if (config.images && config.images.length > 0 && globalTemplate) {
@@ -881,6 +912,21 @@ export const generateCommand = defineCommand({
       });
       slidesCount = templated.length;
 
+      // Derive TransitionEvents from per-slide transition declarations.
+      // A slide's `transition` plays at its endMs (= next slide's startMs).
+      // The last slide's transition is ignored (nothing follows it).
+      const transitionEvents: TransitionEvent[] = [];
+      for (let i = 0; i < templated.length - 1; i++) {
+        const content = inputs[i % inputs.length]!;
+        if (content.transition) {
+          transitionEvents.push({
+            name: content.transition,
+            atMs: templated[i]!.endMs,
+            durationMs: content.transitionDurationMs ?? 400,
+          });
+        }
+      }
+
       const cliStyle =
         typeof args.style === 'string' && args.style !== '' ? args.style : undefined;
       const styleName = cliStyle ?? config.style;
@@ -899,6 +945,7 @@ export const generateCommand = defineCommand({
         audioRelative: audioFile,
         audioDurationMs,
         ...(styleName ? { style: styleName } : {}),
+        ...(transitionEvents.length > 0 ? { transitions: transitionEvents } : {}),
         ...(args.noCaptions
           ? {}
           : tiktokPages

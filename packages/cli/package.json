@@ -29,6 +29,7 @@
     "@reelforge/mux": "workspace:*",
     "@reelforge/providers-stt-whisper": "workspace:*",
     "@reelforge/providers-tts-elevenlabs": "workspace:*",
+    "@reelforge/transitions": "workspace:*",
     "citty": "^0.1.6"
   }
 }

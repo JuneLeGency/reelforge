@@ -17,9 +17,11 @@ export const heroFadeUp: SlideTemplate = (spec: SlideSpec): SlideRenderOutput =>
   const { index, startMs, endMs } = spec;
   const title = spec.title ?? '';
   const subtitle = spec.subtitle ?? '';
+  const image = spec.image ?? '';
   const indexLabel = String(spec.extras?.indexLabel ?? `${String(index + 1).padStart(2, '0')}`);
   const totalLabel = String(spec.extras?.totalLabel ?? '');
   const watermark = String(spec.extras?.watermark ?? 'REELFORGE');
+  const hasImage = image !== '';
 
   const FADE_MS = 400;
   const inStart = startMs;
@@ -29,7 +31,9 @@ export const heroFadeUp: SlideTemplate = (spec: SlideSpec): SlideRenderOutput =>
 
   const id = `slide-${index}`;
   const html = `
-  <section class="slide slide-hero-fade-up" id="${id}" data-slide-index="${index}">
+  <section class="slide slide-hero-fade-up${hasImage ? ' has-bg-image' : ''}" id="${id}" data-slide-index="${index}">
+    ${hasImage ? `<img class="bg-image" src="${escapeAttr(image)}" alt="">` : ''}
+    ${hasImage ? `<div class="bg-scrim"></div>` : ''}
     ${indexLabel !== '' ? `<div class="scene-index">${escapeText(indexLabel)}${totalLabel !== '' ? ` / ${escapeText(totalLabel)}` : ''}</div>` : ''}
     <div class="accent-rule"></div>
     ${title !== '' ? `<h1 class="title">${escapeText(title)}</h1>` : ''}
@@ -115,6 +119,21 @@ export const heroFadeUp: SlideTemplate = (spec: SlideSpec): SlideRenderOutput =>
           { atMs: outEnd, props: { opacity: 0 } },
         ],
       },
+      // Optional background-image slow zoom (1.0 → 1.05) — only when
+      // spec.image is set. No-op otherwise, since there's no element.
+      ...(hasImage
+        ? [
+            {
+              selector: sel('.bg-image'),
+              easing: 'linear',
+              keyframes: [
+                { atMs: 0, props: { transform: 'scale(1)' } },
+                { atMs: startMs, props: { transform: 'scale(1)' } },
+                { atMs: endMs, props: { transform: 'scale(1.05)' } },
+              ],
+            },
+          ]
+        : []),
     ],
   };
 };
@@ -195,6 +214,34 @@ export const HERO_FADE_UP_CSS = `
     color: rgba(255,255,255,0.45);
     font-weight: 500;
     opacity: 0;
+  }
+  .slide-hero-fade-up .bg-image {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform-origin: center center;
+    transform: scale(1);
+    z-index: 0;
+  }
+  .slide-hero-fade-up .bg-scrim {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* When a background photo is present, dim the decorative blurs so
+     the photo reads clearly and text keeps its contrast. */
+  .slide-hero-fade-up.has-bg-image::before,
+  .slide-hero-fade-up.has-bg-image::after {
+    opacity: 0.12;
+  }
+  .slide-hero-fade-up.has-bg-image .accent-rule,
+  .slide-hero-fade-up.has-bg-image .title,
+  .slide-hero-fade-up.has-bg-image .subtitle,
+  .slide-hero-fade-up.has-bg-image .scene-index,
+  .slide-hero-fade-up.has-bg-image .watermark {
+    position: relative;
+    z-index: 2;
   }
 `;
 
