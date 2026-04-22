@@ -1,13 +1,21 @@
 # Showcase demo — Reelforge 仓库介绍片
 
-30 秒自我介绍视频,端到端展示当前仓库的完整能力:
+36 秒自我介绍视频,端到端展示当前仓库的完整能力。两个渲染版本:
+
+| 输出 | caption 模式 | 用途 |
+|---|---|---|
+| `showcase.mp4` | 无(`--noCaptions`) | slide 本身内容丰富,不需要重复叠字幕 |
+| `showcase-tiktok.mp4` | **TikTok per-word 高亮**(`--tiktokCaptions`) | 展示跟随语音的词级黄色高亮 caption 能力 |
+
+两个 mp4 共用**同一份音频 + SRT + config**,只是渲染时加/不加 caption flag。
 
 - **TTS**: VoxCPM2(远程 GPU 服务器,nano-vLLM 后端,RTF ~0.11)
-- **模板**: 8 种混用(hero-fade-up / kinetic-type / bullet-stagger / data-chart-reveal / split-reveal / timeline-roadmap / quote-card / logo-outro / end-card)
+- **模板**: 9 种混用(hero-fade-up / bullet-stagger / kinetic-type / **arch-diagram** / data-chart-reveal / split-reveal / timeline-roadmap / quote-card / logo-outro / end-card)
 - **视觉风格**: dark-premium
 - **动画**: kinetic-type 默认用 spring-bouncy 物理展开
 - **Chrome effects**: 5 个(flash-white / wipe-sweep / rgb-split / radial-pulse / glitch-crack)
-- **渲染**: engine-chrome 单进程 30 fps,约 20 秒跑完 898 帧
+- **caption**: sentence 级(默认)/ TikTok 级(per-word 黄色高亮)/ 无 — 三档
+- **渲染**: engine-chrome 单进程(headless-shell + manual-keyframes adapter)30 fps
 
 ## 流水线
 
@@ -47,13 +55,22 @@ python3 examples/showcase-demo/stitch.py
 ffmpeg -y -i examples/showcase-demo/narration.wav \
   -codec:a libmp3lame -q:a 4 examples/showcase-demo/narration.mp3
 
-# 4. 渲染视频
+# 4. 渲染视频 — 无 caption(slide 本身承载内容)
 bun packages/cli/src/bin.ts generate examples/showcase-demo/config.json \
   --output examples/showcase-demo/showcase.mp4 \
-  --no-captions
+  --noCaptions
+
+# 4b. 同一输入 + TikTok per-word 高亮 caption
+bun packages/cli/src/bin.ts generate examples/showcase-demo/config.json \
+  --output examples/showcase-demo/showcase-tiktok.mp4 \
+  --tiktokCaptions
 ```
 
-最终产出:`examples/showcase-demo/showcase.mp4`(~1 MB,30 秒)。
+⚠️ **flag 是 camelCase**:citty 把 kebab-case flag 映射到 JS 对象 key,所以必须写 `--noCaptions` / `--tiktokCaptions`,而不是 `--no-captions`。
+
+最终产出:
+- `showcase.mp4`(~1.6 MB,36 秒)— 纯 slide 内容
+- `showcase-tiktok.mp4`(~1.7 MB,36 秒)— 带 TikTok per-word 高亮 caption
 
 ## 文件说明
 
