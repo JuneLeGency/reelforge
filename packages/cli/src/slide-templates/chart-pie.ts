@@ -43,31 +43,37 @@ export const chartPie: SlideTemplate = (spec: SlideSpec): SlideRenderOutput => {
   const R = 110;
   const CIRC = 2 * Math.PI * R;
 
-  // Compute each slice's start offset + sweep length along the donut circle.
-  let cumulative = 0;
+  // Compute each slice as a real SVG arc path. Chromium headless
+  // renders <circle stroke-dashoffset> updates unreliably under the
+  // seek+screenshot pipeline, so we use explicit arc paths and animate
+  // opacity + scale instead.
+  let cumulativeRad = -Math.PI / 2; // start at 12 o'clock
   const arcs = slices.map((s) => {
     const frac = s.value / total;
-    const arcLen = frac * CIRC;
-    const startOffset = cumulative;
-    cumulative += arcLen;
-    return { ...s, arcLen, startOffset, percent: frac * 100 };
+    const arcRad = frac * Math.PI * 2;
+    const start = cumulativeRad;
+    const end = cumulativeRad + arcRad;
+    cumulativeRad += arcRad;
+    const x1 = CX + R * Math.cos(start);
+    const y1 = CY + R * Math.sin(start);
+    const x2 = CX + R * Math.cos(end);
+    const y2 = CY + R * Math.sin(end);
+    const largeArc = arcRad > Math.PI ? 1 : 0;
+    // Arc path (stroke only — keeps the donut ring look).
+    const path = `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+    return { ...s, path, percent: frac * 100 };
   });
 
-  // Each slice is a circle with stroke-dasharray = arcLen + (CIRC -
-  // arcLen) and a rotation so its "starting point" aligns. We animate
-  // stroke-dashoffset from arcLen → 0 (visible slice grows clockwise).
   const slicesSvg = arcs
-    .map((a, i) => {
-      const rotationDeg = (a.startOffset / CIRC) * 360 - 90;
-      return `<circle class="slice" data-i="${i}"
-        cx="${CX}" cy="${CY}" r="${R}"
+    .map(
+      (a, i) =>
+        `<path class="slice" data-i="${i}"
+        d="${a.path}"
         fill="none"
         stroke="${a.color}"
         stroke-width="30"
-        stroke-dasharray="${a.arcLen.toFixed(2)} ${CIRC.toFixed(2)}"
-        stroke-dashoffset="${a.arcLen.toFixed(2)}"
-        transform="rotate(${rotationDeg.toFixed(2)} ${CX} ${CY})" />`;
-    })
+        stroke-linecap="butt" />`,
+    )
     .join('');
 
   const legendHtml = arcs
@@ -97,20 +103,21 @@ export const chartPie: SlideTemplate = (spec: SlideSpec): SlideRenderOutput => {
   const sel = (s: string) => `#${id}${s === '' ? '' : ' ' + s}`;
 
   const STAGGER_MS = 180;
-  const SWEEP_MS = 600;
+  const SWEEP_MS = 500;
   const sweepStart = inStart + 360;
-  const sliceAnims = arcs.flatMap((a, i) => {
+  const sliceAnims = arcs.flatMap((_a, i) => {
     const delay = sweepStart + i * STAGGER_MS;
     return [
+      // Slice fades + scales from centre — sweep/stagger still reads clearly.
       {
         selector: sel(`.slice[data-i="${i}"]`),
         easing: 'cubic-bezier(.22,.9,.32,1)',
         keyframes: [
-          { atMs: 0, props: { strokeDashoffset: a.arcLen.toFixed(2) } },
-          { atMs: Math.max(0, delay - 1), props: { strokeDashoffset: a.arcLen.toFixed(2) } },
-          { atMs: delay + SWEEP_MS, props: { strokeDashoffset: '0' } },
-          { atMs: outStart, props: { strokeDashoffset: '0' } },
-          { atMs: outEnd, props: { strokeDashoffset: a.arcLen.toFixed(2) } },
+          { atMs: 0, props: { opacity: 0, transform: 'scale(0.82)' } },
+          { atMs: Math.max(0, delay - 1), props: { opacity: 0, transform: 'scale(0.82)' } },
+          { atMs: delay + SWEEP_MS, props: { opacity: 1, transform: 'scale(1)' } },
+          { atMs: outStart, props: { opacity: 1, transform: 'scale(1)' } },
+          { atMs: outEnd, props: { opacity: 0, transform: 'scale(0.95)' } },
         ],
       },
       {
@@ -206,8 +213,10 @@ export const CHART_PIE_CSS = `
     width: 320px; height: 320px;
   }
   .slide-chart-pie .slice {
-    transition: none;
     transform-origin: 150px 150px;
+    transform-box: fill-box;
+    transform: scale(0.82);
+    opacity: 0;
   }
   .slide-chart-pie .centre-total {
     font-size: 56px;

@@ -1,72 +1,192 @@
 {
   "silence_ms": 600,
-  "total_ms": 38160,
+  "total_ms": 122160,
   "slides": [
     {
       "i": 0,
-      "line": "Reelforge,程序化视频生成框架。",
+      "line": "Reelforge,三十个模板巡展。",
       "startMs": 0,
-      "endMs": 5420
+      "endMs": 4300
     },
     {
       "i": 1,
-      "line": "十三个包,十六个模板,十个特效。",
-      "startMs": 4920,
-      "endMs": 8580
+      "line": "hero fade up,中央大标题。",
+      "startMs": 3800,
+      "endMs": 7300
     },
     {
       "i": 2,
-      "line": "开箱即用,从配置到视频一条命令。",
-      "startMs": 8080,
-      "endMs": 12860
+      "line": "kinetic type,逐字弹跳。",
+      "startMs": 6800,
+      "endMs": 10780
     },
     {
       "i": 3,
-      "line": "核心流程,四步贯通。",
-      "startMs": 12360,
-      "endMs": 18100
+      "line": "split reveal,标题一刀切开。",
+      "startMs": 10280,
+      "endMs": 14900
     },
     {
       "i": 4,
-      "line": "对比手写,更短更清晰。",
-      "startMs": 17600,
-      "endMs": 20460
+      "line": "bullet stagger,要点依次登场。",
+      "startMs": 14400,
+      "endMs": 19340
     },
     {
       "i": 5,
-      "line": "测试覆盖,全线通过。",
-      "startMs": 19960,
-      "endMs": 24100
+      "line": "quote card,金句放大。",
+      "startMs": 18840,
+      "endMs": 25220
     },
     {
       "i": 6,
-      "line": "六套命名视觉风格。",
-      "startMs": 23600,
-      "endMs": 26460
+      "line": "data chart reveal,柱状图。",
+      "startMs": 24720,
+      "endMs": 29500
     },
     {
       "i": 7,
-      "line": "持续演进,开源共建。",
-      "startMs": 25960,
-      "endMs": 30260
+      "line": "data grid,仪表盘卡片。",
+      "startMs": 29000,
+      "endMs": 33460
     },
     {
       "i": 8,
-      "line": "让 AI 直接开箱生成视频。",
-      "startMs": 29760,
-      "endMs": 33420
+      "line": "chart line,折线趋势。",
+      "startMs": 32960,
+      "endMs": 40140
     },
     {
       "i": 9,
-      "line": "这就是 Reelforge。",
-      "startMs": 32920,
-      "endMs": 35940
+      "line": "chart pie,环形占比。",
+      "startMs": 39640,
+      "endMs": 43780
     },
     {
       "i": 10,
-      "line": "访问 GitHub,开始你的视频。",
-      "startMs": 35440,
-      "endMs": 38160
+      "line": "timeline roadmap,水平时间轴。",
+      "startMs": 43280,
+      "endMs": 47740
+    },
+    {
+      "i": 11,
+      "line": "arch diagram,渲染流水线。",
+      "startMs": 47240,
+      "endMs": 51220
+    },
+    {
+      "i": 12,
+      "line": "flowchart,决策树分叉。",
+      "startMs": 50720,
+      "endMs": 54380
+    },
+    {
+      "i": 13,
+      "line": "split compare,前后对比。",
+      "startMs": 53880,
+      "endMs": 57540
+    },
+    {
+      "i": 14,
+      "line": "code block,语法高亮窗口。",
+      "startMs": 57040,
+      "endMs": 60540
+    },
+    {
+      "i": 15,
+      "line": "news title,突发新闻条。",
+      "startMs": 60040,
+      "endMs": 64500
+    },
+    {
+      "i": 16,
+      "line": "gradient bg,动感渐变背景。",
+      "startMs": 64000,
+      "endMs": 68300
+    },
+    {
+      "i": 17,
+      "line": "ken burns zoom,图片慢推拉。",
+      "startMs": 67800,
+      "endMs": 72580
+    },
+    {
+      "i": 18,
+      "line": "photo card,大图加卡片。",
+      "startMs": 72080,
+      "endMs": 76540
+    },
+    {
+      "i": 19,
+      "line": "image left text,左图右文。",
+      "startMs": 76040,
+      "endMs": 80820
+    },
+    {
+      "i": 20,
+      "line": "image right text,右图左文。",
+      "startMs": 80320,
+      "endMs": 86860
+    },
+    {
+      "i": 21,
+      "line": "image grid,九宫格画廊。",
+      "startMs": 86360,
+      "endMs": 90980
+    },
+    {
+      "i": 22,
+      "line": "picture in picture,主画面画中画。",
+      "startMs": 90480,
+      "endMs": 95260
+    },
+    {
+      "i": 23,
+      "line": "testimonial,用户证言。",
+      "startMs": 94760,
+      "endMs": 99060
+    },
+    {
+      "i": 24,
+      "line": "lower third,新闻条。",
+      "startMs": 98560,
+      "endMs": 102700
+    },
+    {
+      "i": 25,
+      "line": "ui 3d reveal,三维翻转登场。",
+      "startMs": 102200,
+      "endMs": 106980
+    },
+    {
+      "i": 26,
+      "line": "audio waveform,频谱可视化。",
+      "startMs": 106480,
+      "endMs": 110620
+    },
+    {
+      "i": 27,
+      "line": "music card,正在播放。",
+      "startMs": 110120,
+      "endMs": 113940
+    },
+    {
+      "i": 28,
+      "line": "social follow,关注订阅卡。",
+      "startMs": 113440,
+      "endMs": 117420
+    },
+    {
+      "i": 29,
+      "line": "logo outro,Logo 收束。",
+      "startMs": 116920,
+      "endMs": 120740
+    },
+    {
+      "i": 30,
+      "line": "end card,谢谢观看。",
+      "startMs": 120240,
+      "endMs": 122160
     }
   ]
 }

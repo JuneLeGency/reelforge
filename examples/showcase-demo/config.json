@@ -6,85 +6,264 @@
     {
       "template": "hero-fade-up",
       "title": "Reelforge",
-      "subtitle": "程序化视频生成框架",
+      "subtitle": "30 模板巡展",
       "transition": "flash-white",
       "transitionDurationMs": 300
     },
     {
+      "template": "hero-fade-up",
+      "title": "hero-fade-up",
+      "subtitle": "大标题 · 副标 · 装饰线"
+    },
+    {
+      "template": "kinetic-type",
+      "title": "kinetic-type",
+      "subtitle": "逐字符 spring-bouncy 入场"
+    },
+    {
+      "template": "split-reveal",
+      "title": "split-reveal",
+      "subtitle": "clip-path 精准切开",
+      "transition": "wipe-sweep",
+      "transitionDurationMs": 400
+    },
+    {
       "template": "bullet-stagger",
-      "title": "仓库结构",
+      "title": "bullet-stagger",
       "bullets": [
-        "13 个 TypeScript 包",
-        "16 个 slide 模板",
-        "10 个 Chrome 特效",
-        "66 个 FFmpeg xfade"
+        "左对齐列表布局",
+        "每条 150ms 依次入场",
+        "适合功能清单"
+      ]
+    },
+    {
+      "template": "quote-card",
+      "title": "程序化,为创作者服务。",
+      "subtitle": "— quote-card template"
+    },
+    {
+      "template": "data-chart-reveal",
+      "title": "data-chart-reveal",
+      "bullets": [
+        "测试: 219",
+        "模板: 30",
+        "特效: 10",
+        "包: 13"
+      ],
+      "transition": "radial-pulse",
+      "transitionDurationMs": 400
+    },
+    {
+      "template": "data-grid",
+      "title": "data-grid",
+      "subtitle": "KPI 仪表盘",
+      "bullets": [
+        "MRR: $42K",
+        "Users: 1.2M",
+        "Churn: 2.1%",
+        "NPS: 68"
+      ]
+    },
+    {
+      "template": "chart-line",
+      "title": "chart-line",
+      "bullets": [
+        "x: Q1,Q2,Q3,Q4,Q5,Q6",
+        "Revenue: 12, 19, 31, 48, 62, 88",
+        "Users: 5, 11, 18, 27, 41, 63"
+      ]
+    },
+    {
+      "template": "chart-pie",
+      "title": "chart-pie",
+      "bullets": [
+        "web: 52",
+        "ios: 28",
+        "android: 15",
+        "other: 5"
+      ],
+      "transition": "rgb-split",
+      "transitionDurationMs": 400
+    },
+    {
+      "template": "timeline-roadmap",
+      "title": "timeline-roadmap",
+      "bullets": [
+        "首版 | 2025-10",
+        "模板库 | 2026-Q1",
+        "Effects | 2026-Q2"
+      ]
+    },
+    {
+      "template": "arch-diagram",
+      "title": "arch-diagram",
+      "bullets": [
+        "config.json | 声明式",
+        "rf generate | CLI",
+        "engine-chrome | 渲染",
+        "ffmpeg | 混流",
+        "mp4 | 成片"
+      ]
+    },
+    {
+      "template": "flowchart",
+      "title": "flowchart",
+      "bullets": [
+        "构建通过?",
+        "yes | 打包发布",
+        "no | 回滚分支"
+      ],
+      "transition": "flash-white",
+      "transitionDurationMs": 300
+    },
+    {
+      "template": "split-compare",
+      "title": "split-compare",
+      "subtitle": "一图胜千言",
+      "extras": {
+        "leftTag": "BEFORE",
+        "leftTitle": "手写 HTML + GSAP",
+        "leftBody": "<h1>Title</h1>\ngsap.timeline()\n  .from(h1, { y: 40 })\n  .to(h1, { opacity: 0 })\nffmpeg -i a.html ...",
+        "rightTag": "AFTER",
+        "rightTitle": "rf generate",
+        "rightBody": "{\n  \"slides\": [{\n    \"template\": \"hero-fade-up\",\n    \"title\": \"Title\"\n  }]\n}\n$ rf generate config.json"
+      }
+    },
+    {
+      "template": "code-block",
+      "title": "code-block",
+      "subtitle": "app.ts",
+      "bullets": [
+        "// dark-mode macOS-style window",
+        "import { renderChrome } from '@reelforge/engine-chrome';",
+        "",
+        "const mp4 = await renderChrome({",
+        "  project,",
+        "  outputPath: './showcase.mp4',",
+        "});",
+        "",
+        "return mp4;"
       ],
       "transition": "wipe-sweep",
       "transitionDurationMs": 400
     },
     {
-      "template": "kinetic-type",
-      "title": "开箱即用",
-      "subtitle": "一条命令,一段音频,一份配置"
-    },
-    {
-      "template": "arch-diagram",
-      "title": "渲染流水线",
+      "template": "news-title",
+      "title": "Reelforge ships 30 templates",
+      "subtitle": "open-source programmatic video framework",
       "bullets": [
-        "config.json | 声明式配置",
-        "rf generate | TTS · SRT · 模板",
-        "engine-chrome | 帧级同步渲染",
-        "ffmpeg mux | 音频混流",
-        "showcase.mp4 | 可播放成片"
-      ]
+        "18 templates → 30",
+        "10 chrome effects",
+        "66 xfade transitions",
+        "VoxCPM TTS integration"
+      ],
+      "extras": { "tag": "BREAKING", "source": "REELFORGE LIVE" }
     },
     {
-      "template": "split-compare",
-      "title": "手写 vs 配置化",
-      "subtitle": "同一个视频,两条路径",
-      "extras": {
-        "leftTag": "BEFORE",
-        "leftTitle": "HTML + GSAP + ffmpeg",
-        "leftBody": "<h1>Reelforge</h1>\ngsap.timeline()\n  .from(h1, { y: 40 })\n  .to(h1, { opacity: 0 });\nffmpeg -i a.html ...\n# 每 slide 一份 js",
-        "rightTag": "AFTER",
-        "rightTitle": "rf generate",
-        "rightBody": "{\n  \"slides\": [{\n    \"template\": \"hero-fade-up\",\n    \"title\": \"Reelforge\"\n  }]\n}\n$ rf generate config.json"
-      },
+      "template": "gradient-bg",
+      "title": "gradient-bg",
+      "subtitle": "ambient moving backdrop",
+      "extras": { "from": "#ff2a6d", "via": "#7209b7", "to": "#05d9e8" }
+    },
+    {
+      "template": "ken-burns-zoom",
+      "title": "ken-burns-zoom",
+      "subtitle": "slow push 1.0 → 1.08",
+      "image": "../fastpath-demo/slide-a.png"
+    },
+    {
+      "template": "photo-card",
+      "title": "photo-card",
+      "subtitle": "big image + floating caption",
+      "image": "../intro-demo/slides/slide-01.svg",
+      "extras": { "eyebrow": "EPISODE 01" }
+    },
+    {
+      "template": "image-left-text",
+      "title": "image-left-text",
+      "subtitle": "图在左 · 文字在右",
+      "image": "../intro-demo/slides/slide-02.svg",
+      "extras": { "eyebrow": "LAYOUT 05" }
+    },
+    {
+      "template": "image-right-text",
+      "title": "image-right-text",
+      "subtitle": "镜像版,图在右边",
+      "image": "../intro-demo/slides/slide-03.svg",
+      "extras": { "eyebrow": "LAYOUT 06" },
       "transition": "rgb-split",
       "transitionDurationMs": 400
     },
     {
-      "template": "data-chart-reveal",
-      "title": "测试覆盖(tests)",
+      "template": "image-grid",
+      "title": "image-grid",
+      "subtitle": "九宫格 / 四宫格自适应",
       "bullets": [
-        "cli: 183",
-        "transitions: 42",
-        "engine-chrome: 26",
-        "captions: 27"
-      ],
-      "transition": "radial-pulse",
-      "transitionDurationMs": 400
-    },
-    {
-      "template": "split-reveal",
-      "title": "六套视觉风格",
-      "subtitle": "秒切主题 · 风格无缝"
-    },
-    {
-      "template": "timeline-roadmap",
-      "title": "持续演进",
-      "bullets": [
-        "首版 | 2025-10",
-        "模板库 | 2026-Q1",
-        "Effects & Compose | 2026-Q2"
+        "../intro-demo/slides/slide-01.svg",
+        "../intro-demo/slides/slide-02.svg",
+        "../intro-demo/slides/slide-03.svg",
+        "../intro-demo/slides/slide-04.svg",
+        "../intro-demo/slides/slide-05.svg",
+        "../intro-demo/slides/slide-06.svg"
       ]
     },
     {
-      "template": "quote-card",
-      "title": "让 AI 直接开箱生成视频。",
-      "subtitle": "— Reelforge Design",
-      "transition": "radial-pulse",
-      "transitionDurationMs": 400
+      "template": "picture-in-picture",
+      "title": "picture-in-picture",
+      "subtitle": "主画面 + pip 浮窗 + 背景模糊",
+      "image": "../fastpath-demo/slide-b.png",
+      "extras": {
+        "pipImage": "../fastpath-demo/slide-c.png",
+        "blurBg": 6
+      }
+    },
+    {
+      "template": "testimonial",
+      "title": "Reelforge cut our production time in half.",
+      "subtitle": "Jane Doe, Head of Design",
+      "image": "../fastpath-demo/slide-a.png",
+      "extras": { "company": "ACME" }
+    },
+    {
+      "template": "lower-third",
+      "title": "Jane Doe",
+      "subtitle": "Head of Design, Reelforge",
+      "image": "../fastpath-demo/slide-b.png",
+      "extras": { "tag": "LIVE" }
+    },
+    {
+      "template": "ui-3d-reveal",
+      "title": "ui-3d-reveal",
+      "subtitle": "CSS 3D 透视翻转",
+      "image": "../intro-demo/slides/slide-05.svg",
+      "extras": { "angle": 42 }
+    },
+    {
+      "template": "audio-waveform",
+      "title": "audio-waveform",
+      "subtitle": "40 根频谱柱 · 预采样动画",
+      "extras": { "bars": 48 }
+    },
+    {
+      "template": "music-card",
+      "title": "Night Drive",
+      "subtitle": "Reelforge OST · Aiden",
+      "extras": {
+        "album": "From the album Vol.1",
+        "duration": "3:42",
+        "platform": "SPOTIFY"
+      }
+    },
+    {
+      "template": "social-follow",
+      "title": "@reelforge",
+      "subtitle": "程序化视频生成框架 · 开源",
+      "extras": {
+        "platform": "github",
+        "counter": "2.4k stars · growing"
+      },
+      "transition": "flash-white",
+      "transitionDurationMs": 300
     },
     {
       "template": "logo-outro",
@@ -95,8 +274,9 @@
     },
     {
       "template": "end-card",
-      "title": "Star & Ship",
-      "subtitle": "github.com/JuneLeGency/reelforge"
+      "title": "Thanks for watching",
+      "subtitle": "github.com/JuneLeGency/reelforge",
+      "extras": { "icons": "⭐|👁|🚀", "actions": "Star|Watch|Ship" }
     }
   ],
   "width": 1280,

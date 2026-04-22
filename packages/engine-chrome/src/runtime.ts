@@ -97,10 +97,26 @@ export const RUNTIME_SCRIPT = String.raw`
       blendPropsInto(el, a.props, b.props, p);
     }
 
+    // For SVG elements, a few presentation properties don't re-render
+    // from el.style setProperty consistently in Chromium — especially
+    // stroke-dasharray / stroke-dashoffset mid-animation. Mirror those
+    // to the element's XML attribute as well so paint picks them up.
+    var SVG_MIRROR_ATTRS = {
+      'stroke-dashoffset': 1,
+      'stroke-dasharray': 1,
+      'stroke-width': 1,
+      fill: 1,
+      stroke: 1,
+      'fill-opacity': 1,
+      'stroke-opacity': 1,
+      opacity: 1,
+    };
+
     function blendPropsInto(el, fromProps, toProps, p) {
       var keys = {};
       for (var k in fromProps) keys[k] = 1;
       for (var k in toProps) keys[k] = 1;
+      var isSvg = typeof SVGElement !== 'undefined' && el instanceof SVGElement;
       for (var k in keys) {
         var av = fromProps[k];
         var bv = toProps[k];
@@ -117,6 +133,9 @@ export const RUNTIME_SCRIPT = String.raw`
         // Convert camelCase to kebab-case for CSS (transform already ok).
         var cssProp = k.replace(/[A-Z]/g, function (m) { return '-' + m.toLowerCase(); });
         try { el.style.setProperty(cssProp, String(out)); } catch (e) { /* noop */ }
+        if (isSvg && SVG_MIRROR_ATTRS[cssProp]) {
+          try { el.setAttribute(cssProp, String(out)); } catch (e) { /* noop */ }
+        }
       }
     }
 
