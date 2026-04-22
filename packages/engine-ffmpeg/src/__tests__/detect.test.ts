@@ -45,14 +45,32 @@ describe('canUseFastPath', () => {
     expect(explainFastPath(p)).toMatch(/effects/);
   });
 
-  test('rejects clips with transitions', () => {
+  test('accepts known transitions (xfade resolves)', () => {
     const p = baseProject();
-    p.timeline.tracks[0]!.clips[0]!.transitionIn = {
+    p.timeline.tracks[0]!.clips[0]!.transitionOut = {
       name: 'fade',
       durationMs: 500,
     };
+    expect(canUseFastPath(p)).toBe(true);
+    expect(explainFastPath(p)).toBeNull();
+  });
+
+  test('rejects unknown transitions', () => {
+    const p = baseProject();
+    p.timeline.tracks[0]!.clips[0]!.transitionOut = {
+      name: 'spiral-of-death',
+      durationMs: 500,
+    };
     expect(canUseFastPath(p)).toBe(false);
-    expect(explainFastPath(p)).toMatch(/transition/);
+    expect(explainFastPath(p)).toMatch(/Unknown transition/);
+  });
+
+  test('rejects named transition-library refs (string) — inline spec required', () => {
+    const p = baseProject();
+    p.transitionsLibrary = { 'soft-fade': { name: 'fade', durationMs: 500 } };
+    p.timeline.tracks[0]!.clips[0]!.transitionOut = 'soft-fade';
+    expect(canUseFastPath(p)).toBe(false);
+    expect(explainFastPath(p)).toMatch(/inline TransitionSpec required/);
   });
 
   test('rejects non-media assets', () => {

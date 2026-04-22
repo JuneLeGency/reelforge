@@ -1,4 +1,5 @@
 import type { VideoProject } from '@reelforge/ir';
+import { resolveTransition, TransitionResolveError } from '@reelforge/transitions';
 
 /**
  * Return `true` when the project is simple enough for the pure-ffmpeg
@@ -9,25 +10,11 @@ import type { VideoProject } from '@reelforge/ir';
  * - There are no caption tracks (those imply DOM rendering).
  * - Every track is `video` or `audio` (no `caption` / `overlay` tracks).
  * - No clip declares `effects` (would need a DOM or shader layer).
- * - No clip declares `transitionIn` / `transitionOut` (xfade support lands later).
+ * - Any `transitionIn` / `transitionOut` resolves to an `xfade` built-in
+ *   (via `@reelforge/transitions`). Unknown transition names disqualify.
  */
 export function canUseFastPath(project: VideoProject): boolean {
-  if (project.captions && project.captions.length > 0) return false;
-
-  for (const track of project.timeline.tracks) {
-    if (track.kind !== 'video' && track.kind !== 'audio') return false;
-    for (const clip of track.clips) {
-      if (clip.effects && clip.effects.length > 0) return false;
-      if (clip.transitionIn !== undefined) return false;
-      if (clip.transitionOut !== undefined) return false;
-      const asset = project.assets[clip.assetRef];
-      if (!asset) return false;
-      if (asset.kind !== 'image' && asset.kind !== 'video' && asset.kind !== 'audio') {
-        return false;
-      }
-    }
-  }
-  return true;
+  return explainFastPath(project) === null;
 }
 
 /**
@@ -35,8 +22,6 @@ export function canUseFastPath(project: VideoProject): boolean {
  * Returns `null` when the project *is* fast-path eligible.
  */
 export function explainFastPath(project: VideoProject): string | null {
-  if (canUseFastPath(project)) return null;
-
   if (project.captions && project.captions.length > 0) {
     return 'project has caption tracks (DOM captions required)';
   }
@@ -48,8 +33,20 @@ export function explainFastPath(project: VideoProject): string | null {
       if (clip.effects && clip.effects.length > 0) {
         return `clip "${clip.id}" has effects[] — DOM/shader layer required`;
       }
-      if (clip.transitionIn !== undefined || clip.transitionOut !== undefined) {
-        return `clip "${clip.id}" has a transition — xfade support not yet wired`;
+      for (const key of ['transitionIn', 'transitionOut'] as const) {
+        const t = clip[key];
+        if (t === undefined) continue;
+        if (typeof t === 'string') {
+          return `clip "${clip.id}" has a named transition ref "${t}" — inline TransitionSpec required for fast path`;
+        }
+        try {
+          resolveTransition(t);
+        } catch (err) {
+          if (err instanceof TransitionResolveError) {
+            return `clip "${clip.id}" ${key}: ${err.message}`;
+          }
+          throw err;
+        }
       }
       const asset = project.assets[clip.assetRef];
       if (!asset) return `clip "${clip.id}" references missing asset "${clip.assetRef}"`;
@@ -58,5 +55,5 @@ export function explainFastPath(project: VideoProject): string | null {
       }
     }
   }
-  return 'unknown';
+  return null;
 }

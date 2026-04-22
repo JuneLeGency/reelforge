@@ -1,7 +1,7 @@
 {
-  "name": "@reelforge/engine-ffmpeg",
+  "name": "@reelforge/transitions",
   "version": "0.0.0",
-  "description": "Reelforge fast-path backend — pure ffmpeg filter_complex rendering for IRs that don't need Chrome",
+  "description": "Transition registry — ffmpeg xfade catalog, presets, and filter builders",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./src/index.ts",
@@ -15,8 +15,6 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@reelforge/ir": "workspace:*",
-    "@reelforge/mux": "workspace:*",
-    "@reelforge/transitions": "workspace:*"
+    "@reelforge/ir": "workspace:*"
   }
 }

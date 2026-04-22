@@ -36,6 +36,8 @@ Declarative JSON5-based authoring frontend — inspired by editly's clip/layer m
 
 Clips are concatenated in order. Layer `type` values supported today: **image**, **title**, **audio**. A top-level `audio[]` is a shortcut for per-clip audio layers that span the whole timeline.
 
+Each clip may also set `transition: 'fade' | 'cross-fade' | 'wipe-left' | 'wipe-right' | 'wipe-up' | 'wipe-down' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'dissolve' | 'pixelize' | 'circle-open' | 'circle-close' | 'radial' | 'zoom-in' | 'none'`, or an `xfade:<name>` passthrough for any built-in ffmpeg xfade. See [`@reelforge/transitions`](../transitions) for the full catalog. On the fast path these compile to an `xfade` filter chain; on the Chrome path they are currently ignored (coming later).
+
 ## API
 
 ```ts

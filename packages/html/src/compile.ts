@@ -165,6 +165,15 @@ function buildClip(el: HTMLElement, assetRef: string): Clip {
   const dataId = readString(el, 'data-id');
   const effects = parseEffects(readString(el, 'data-effect'));
 
+  const transitionIn = parseTransition(
+    readString(el, 'data-rf-transition-in'),
+    readNumber(el, 'data-rf-transition-in-ms'),
+  );
+  const transitionOut = parseTransition(
+    readString(el, 'data-rf-transition-out'),
+    readNumber(el, 'data-rf-transition-out-ms'),
+  );
+
   const clip: Clip = {
     id: dataId ?? `clip_${assetRef}_${Math.round(startSec * 1000)}`,
     assetRef,
@@ -177,9 +186,23 @@ function buildClip(el: HTMLElement, assetRef: string): Clip {
     ...(volume !== undefined ? { volume } : {}),
     ...(fit ? { fit } : {}),
     ...(effects.length > 0 ? { effects } : {}),
+    ...(transitionIn ? { transitionIn } : {}),
+    ...(transitionOut ? { transitionOut } : {}),
   };
 
   return clip;
+}
+
+function parseTransition(
+  name: string | undefined,
+  durationMs: number | undefined,
+): { name: string; durationMs: number } | null {
+  if (!name || name === 'none') return null;
+  const ms =
+    durationMs !== undefined && Number.isFinite(durationMs) && durationMs > 0
+      ? Math.round(durationMs)
+      : 500; // Sensible default — matches editly's default transition length.
+  return { name, durationMs: ms };
 }
 
 function parseEffects(raw: string | undefined): EffectRef[] {

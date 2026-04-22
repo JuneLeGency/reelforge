@@ -61,6 +61,7 @@
       "dependencies": {
         "@reelforge/ir": "workspace:*",
         "@reelforge/mux": "workspace:*",
+        "@reelforge/transitions": "workspace:*",
       },
     },
     "packages/html": {
@@ -111,6 +112,13 @@
         "@reelforge/captions": "workspace:*",
       },
     },
+    "packages/transitions": {
+      "name": "@reelforge/transitions",
+      "version": "0.0.0",
+      "dependencies": {
+        "@reelforge/ir": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@hono/node-server": ["@hono/node-server@1.19.14", "https://mirrors.huaweicloud.com/repository/npm/@hono/node-server/-/node-server-1.19.14.tgz", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
@@ -156,6 +164,8 @@
     "@reelforge/providers-stt-whisper": ["@reelforge/providers-stt-whisper@workspace:packages/providers-stt-whisper"],
 
     "@reelforge/providers-tts-elevenlabs": ["@reelforge/providers-tts-elevenlabs@workspace:packages/providers-tts-elevenlabs"],
+
+    "@reelforge/transitions": ["@reelforge/transitions@workspace:packages/transitions"],
 
     "@tootallnate/quickjs-emscripten": ["@tootallnate/quickjs-emscripten@0.23.0", "https://mirrors.huaweicloud.com/repository/npm/@tootallnate/quickjs-emscripten/-/quickjs-emscripten-0.23.0.tgz", {}, "sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA=="],
 

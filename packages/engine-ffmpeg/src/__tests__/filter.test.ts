@@ -90,6 +90,83 @@ describe('buildFastPathArgs', () => {
     expect(args.inputs).toEqual([]);
     expect(args.filterComplex).toContain('color=c=black:s=640x360:r=24:d=3.000[bg]');
   });
+
+  test('overlay-path projects report xfadeChain=false', () => {
+    const args = buildFastPathArgs(makeProject(), '/base');
+    expect(args.xfadeChain).toBe(false);
+  });
+});
+
+describe('buildFastPathArgs — xfade chain', () => {
+  const makeFadeProject = (): VideoProject => ({
+    version: '1',
+    config: { width: 1280, height: 720, fps: 30 },
+    assets: {
+      a: { id: 'a', kind: 'image', source: { scheme: 'file', uri: './a.jpg' } },
+      b: { id: 'b', kind: 'image', source: { scheme: 'file', uri: './b.jpg' } },
+      c: { id: 'c', kind: 'image', source: { scheme: 'file', uri: './c.jpg' } },
+    },
+    timeline: {
+      tracks: [
+        {
+          id: 'main',
+          kind: 'video',
+          clips: [
+            {
+              id: 'c0',
+              assetRef: 'a',
+              startMs: 0,
+              durationMs: 2000,
+              transitionOut: { name: 'fade', durationMs: 500 },
+            },
+            {
+              id: 'c1',
+              assetRef: 'b',
+              startMs: 2000,
+              durationMs: 2000,
+              transitionOut: { name: 'wipe-left', durationMs: 400 },
+            },
+            { id: 'c2', assetRef: 'c', startMs: 4000, durationMs: 2000 },
+          ],
+        },
+      ],
+    },
+  });
+
+  test('detects contiguous clips with transitions → xfade chain', () => {
+    const args = buildFastPathArgs(makeFadeProject(), '/base');
+    expect(args.xfadeChain).toBe(true);
+    expect(args.filterComplex).toContain('xfade=transition=fade:duration=0.500');
+    expect(args.filterComplex).toContain('xfade=transition=wipeleft:duration=0.400');
+  });
+
+  test('offsets accumulate as previous-clip-end minus transition duration', () => {
+    const args = buildFastPathArgs(makeFadeProject(), '/base');
+    // First boundary: v0 is 2s, fade dur 0.5s → offset = 2 - 0.5 = 1.5
+    expect(args.filterComplex).toContain('offset=1.500');
+    // Second boundary: previous chain is v0 (2) + v1 (2) - 0.5 = 3.5s → offset = 3.5 - 0.4 = 3.1
+    expect(args.filterComplex).toContain('offset=3.100');
+  });
+
+  test('xfade-chain clips skip the timeline-setpts shift', () => {
+    const args = buildFastPathArgs(makeFadeProject(), '/base');
+    // All [N:v] chains end with plain PTS-STARTPTS, no PTS+X/TB.
+    expect(args.filterComplex).not.toMatch(/setpts=PTS-STARTPTS\+[0-9]/);
+  });
+
+  test('gap between clips falls back to overlay path', () => {
+    const p = makeFadeProject();
+    p.timeline.tracks[0]!.clips[1]!.startMs = 2500; // creates 0.5 s gap
+    const args = buildFastPathArgs(p, '/base');
+    expect(args.xfadeChain).toBe(false);
+  });
+
+  test('missing transition on a boundary falls back to overlay path', () => {
+    const p = makeFadeProject();
+    delete p.timeline.tracks[0]!.clips[0]!.transitionOut;
+    const args = buildFastPathArgs(p, '/base');
+    expect(args.xfadeChain).toBe(false);
+  });
 });
 
 describe('buildFastPathFfmpegArgs', () => {

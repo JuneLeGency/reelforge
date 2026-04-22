@@ -27,13 +27,25 @@ export function buildDslHtml(project: DslProject): BuildDslHtmlResult {
   const mediaTags: string[] = [];
   const titleDefs: { id: string; text: string; style: Required<NonNullable<DslLayer & { type: 'title' }>['style']> extends object ? object : object; startMs: number; durationMs: number; entrance: 'fade' | 'slide-up' | 'none'; position: 'top' | 'center' | 'bottom'; styleRaw: NonNullable<(DslLayer & { type: 'title' })['style']> | undefined }[] = [];
 
+  const defaultTransition = project.defaults?.transition;
+  const DEFAULT_TRANSITION_MS = 500;
+
   project.clips.forEach((clip, ci) => {
     const t = clipTimes[ci]!;
+    const rawTransition = clip.transition ?? defaultTransition;
+    // A transition on the *outgoing* clip only makes sense when there's
+    // a next clip to blend into. Skip it on the last clip.
+    const isLast = ci === project.clips.length - 1;
+    const outgoing =
+      rawTransition && rawTransition !== 'none' && !isLast ? rawTransition : null;
+    const transitionAttrs = outgoing
+      ? ` data-rf-transition-out="${escapeAttr(outgoing)}" data-rf-transition-out-ms="${DEFAULT_TRANSITION_MS}"`
+      : '';
     clip.layers.forEach((layer, li) => {
       if (layer.type === 'image') {
         const fit = layer.fit ?? 'cover';
         mediaTags.push(
-          `    <img class="layer-image" src="${escapeAttr(layer.src)}" data-start="${toSec(t.startSec)}" data-duration="${toSec(t.durationSec)}" data-fit="${fit}">`,
+          `    <img class="layer-image" src="${escapeAttr(layer.src)}" data-start="${toSec(t.startSec)}" data-duration="${toSec(t.durationSec)}" data-fit="${fit}"${transitionAttrs}>`,
         );
       } else if (layer.type === 'audio') {
         const vol = layer.volume ?? 1;
