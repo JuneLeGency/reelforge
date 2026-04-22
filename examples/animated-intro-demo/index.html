@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-rf-width="1280" data-rf-height="720" data-rf-fps="30" data-rf-duration="47.64">
+<head>
+  <meta charset="utf-8">
+  <title>Reelforge 介绍(动画版)</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      background: #0a0a0f;
+      font-family: -apple-system, "PingFang SC", "Heiti SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+    }
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Scene */
+    .scene {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0;  /* seeked by WAAPI */
+      color: white;
+    }
+
+    /* Gradient backgrounds */
+    .scene[data-bg="1"] { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .scene[data-bg="2"] { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+    .scene[data-bg="3"] { background: linear-gradient(135deg, #00b894 0%, #0984e3 100%); }
+    .scene[data-bg="4"] { background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); }
+    .scene[data-bg="5"] { background: linear-gradient(135deg, #d63031 0%, #e17055 100%); }
+    .scene[data-bg="6"] { background: linear-gradient(135deg, #00cec9 0%, #55efc4 100%); }
+    .scene[data-bg="7"] { background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%); }
+    .scene[data-bg="8"] { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+
+    /* Gradient orbits — animated via CSS (WAAPI-safe because transform/opacity only) */
+    .scene::before, .scene::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .scene::before {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(255,255,255,0.5), transparent 70%);
+      top: -150px; left: -150px;
+    }
+    .scene::after {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%);
+      bottom: -200px; right: -150px;
+    }
+
+    /* Accent rule above title */
+    .accent-rule {
+      width: 80px; height: 4px;
+      background: rgba(255,255,255,0.9);
+      margin-bottom: 36px;
+      border-radius: 2px;
+      transform: scaleX(0);
+      transform-origin: left center;
+    }
+
+    /* Title */
+    .title {
+      font-size: 108px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      text-align: center;
+      margin: 0 0 28px 0;
+      text-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transform: translateY(40px);
+      opacity: 0;
+    }
+
+    /* Subtitle */
+    .subtitle {
+      font-size: 42px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.92);
+      letter-spacing: 0.5px;
+      transform: translateY(30px);
+      opacity: 0;
+    }
+
+    /* Scene index pill */
+    .scene-index {
+      position: absolute;
+      top: 48px; left: 48px;
+      font-size: 20px;
+      letter-spacing: 4px;
+      color: rgba(255,255,255,0.6);
+      font-weight: 600;
+    }
+
+    /* Watermark */
+    .watermark {
+      position: absolute;
+      bottom: 48px; right: 48px;
+      font-size: 18px;
+      letter-spacing: 6px;
+      color: rgba(255,255,255,0.45);
+      font-weight: 500;
+    }
+
+    /* Caption overlay (sentence-level, WAAPI) */
+    .caption {
+      position: absolute;
+      left: 50%;
+      bottom: 12vh;
+      transform: translateX(-50%);
+      max-width: 80vw;
+      padding: 14px 28px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      backdrop-filter: blur(6px);
+    }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <!-- 8 scenes matching the 8 sentences in narration.srt -->
+    <div class="scene" id="scene-1" data-bg="1">
+      <div class="scene-index">01 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">Reelforge</h1>
+      <div class="subtitle">通用程序化视频生成框架</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-2" data-bg="2">
+      <div class="scene-index">02 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">三个核心设计</h1>
+      <div class="subtitle">IR · 多前端 · 多后端</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-3" data-bg="3">
+      <div class="scene-index">03 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">多种创作方式</h1>
+      <div class="subtitle">HTML · JSON · 代码 · Agent</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-4" data-bg="4">
+      <div class="scene-index">04 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">VideoProject IR</h1>
+      <div class="subtitle">统一中间表示</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-5" data-bg="5">
+      <div class="scene-index">05 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">智能后端路由</h1>
+      <div class="subtitle">FFmpeg · Chrome · WebCodecs</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-6" data-bg="6">
+      <div class="scene-index">06 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">消费 TTS 产物</h1>
+      <div class="subtitle">BYO 音频 · Whisper 自动转录</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-7" data-bg="7">
+      <div class="scene-index">07 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">WAAPI 字幕</h1>
+      <div class="subtitle">无需 libass · 全 ffmpeg 可用</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+    <div class="scene" id="scene-8" data-bg="8">
+      <div class="scene-index">08 / 08</div>
+      <div class="accent-rule"></div>
+      <h1 class="title">流水线闭环</h1>
+      <div class="subtitle">从脚本到成片</div>
+      <div class="watermark">REELFORGE</div>
+    </div>
+
+    <!-- Sentence-level caption (WAAPI opacity) -->
+    <div class="caption" id="cap-1">大家好，这里是 Reelforge，一个通用的程序化视频生成框架。</div>
+    <div class="caption" id="cap-2">它有三个核心设计：统一中间表示，多种创作前端，以及多种渲染后端。</div>
+    <div class="caption" id="cap-3">你可以用 HTML、JSON 配置、或者代码生成器来创作视频，最终编译到同一个 IR，也就是 VideoProject。</div>
+    <div class="caption" id="cap-4">渲染时框架会自动选择最优后端，纯图片和视频走 FFmpeg 快速通道，复杂动画走 Chrome 精确捕获。</div>
+    <div class="caption" id="cap-5">Reelforge 不生产语音，但把语音产物当作一等公民。</div>
+    <div class="caption" id="cap-6">你可以自带 MP3 和词级时间戳，也可以用 Whisper 自动转录。</div>
+    <div class="caption" id="cap-7">字幕用 WAAPI 渲染在浏览器里，无需 libass，天然兼容。</div>
+    <div class="caption" id="cap-8">整条流水线就是这么工作的。</div>
+
+    <!-- Narration audio (picked up by the HTML frontend, muxed by @reelforge/mux) -->
+    <audio src="../intro-demo/narration.mp3" data-start="0" data-duration="47.64"></audio>
+  </div>
+
+  <script>
+  (function () {
+    // Actual sentence boundaries in narration.srt (char-proportional split of 47.64 s).
+    // end = next.start; cross-fade overlaps 400 ms.
+    const TOTAL = 47640;
+    const FADE = 400;   // ms cross-fade between scenes
+    const SCENES = [
+      { s: 0,     e: 5459 },
+      { s: 5459,  e: 10749 },
+      { s: 10749, e: 16037 },
+      { s: 16037, e: 22498 },
+      { s: 22498, e: 25525 },
+      { s: 25525, e: 30225 },
+      { s: 30225, e: 34516 },
+      { s: 34516, e: 47640 },
+    ];
+
+    function mkFrames(points) {
+      // Ensure strict monotonic offsets, clamped to [0,1].
+      let last = -1;
+      return points.map(p => {
+        let o = Math.max(0, Math.min(1, p.o));
+        if (o <= last) o = Math.min(1, last + 1e-6);
+        last = o;
+        const { o: _, ...rest } = p;
+        return { ...rest, offset: o };
+      });
+    }
+
+    const easeOut = 'cubic-bezier(0.22, 0.9, 0.32, 1)';
+    const easeIn  = 'cubic-bezier(0.4, 0, 0.8, 0.3)';
+
+    SCENES.forEach(function (sc, i) {
+      const root = document.getElementById('scene-' + (i + 1));
+      if (!root) return;
+
+      const inStart = sc.s;
+      const inEnd   = sc.s + FADE;
+      const outStart = sc.e - FADE;
+      const outEnd   = sc.e;
+
+      // --- Scene container opacity: cross-fade with neighbours ---
+      root.animate(mkFrames([
+        { opacity: 0, o: 0 },
+        { opacity: 0, o: Math.max(0, inStart - 1) / TOTAL },
+        { opacity: 1, o: inEnd / TOTAL },
+        { opacity: 1, o: outStart / TOTAL },
+        { opacity: 0, o: outEnd / TOTAL },
+        { opacity: 0, o: 1 },
+      ]), { duration: TOTAL, fill: 'both', easing: 'linear' });
+
+      // --- Accent rule: scale-x 0→1, delayed 120ms after entrance ---
+      const rule = root.querySelector('.accent-rule');
+      if (rule) {
+        const ruleStart = inStart + 120;
+        const ruleEnd = ruleStart + 500;
+        rule.animate(mkFrames([
+          { transform: 'scaleX(0)',  o: 0 },
+          { transform: 'scaleX(0)',  o: Math.max(0, ruleStart - 1) / TOTAL },
+          { transform: 'scaleX(1)',  o: ruleEnd / TOTAL, easing: easeOut },
+          { transform: 'scaleX(1)',  o: outStart / TOTAL },
+          { transform: 'scaleX(0)',  o: outEnd / TOTAL, easing: easeIn },
+          { transform: 'scaleX(0)',  o: 1 },
+        ]), { duration: TOTAL, fill: 'both' });
+      }
+
+      // --- Title: y:40→0, opacity 0→1, delayed 220ms ---
+      const title = root.querySelector('.title');
+      if (title) {
+        const titleStart = inStart + 220;
+        const titleEnd = titleStart + 700;
+        title.animate(mkFrames([
+          { opacity: 0, transform: 'translateY(40px)',  o: 0 },
+          { opacity: 0, transform: 'translateY(40px)',  o: Math.max(0, titleStart - 1) / TOTAL },
+          { opacity: 1, transform: 'translateY(0px)',   o: titleEnd / TOTAL, easing: easeOut },
+          { opacity: 1, transform: 'translateY(0px)',   o: outStart / TOTAL },
+          { opacity: 0, transform: 'translateY(-20px)', o: outEnd / TOTAL, easing: easeIn },
+          { opacity: 0, transform: 'translateY(-20px)', o: 1 },
+        ]), { duration: TOTAL, fill: 'both' });
+      }
+
+      // --- Subtitle: y:30→0, delayed 480ms ---
+      const subtitle = root.querySelector('.subtitle');
+      if (subtitle) {
+        const subStart = inStart + 480;
+        const subEnd = subStart + 650;
+        subtitle.animate(mkFrames([
+          { opacity: 0, transform: 'translateY(30px)',  o: 0 },
+          { opacity: 0, transform: 'translateY(30px)',  o: Math.max(0, subStart - 1) / TOTAL },
+          { opacity: 1, transform: 'translateY(0px)',   o: subEnd / TOTAL, easing: easeOut },
+          { opacity: 1, transform: 'translateY(0px)',   o: outStart / TOTAL },
+          { opacity: 0, transform: 'translateY(-20px)', o: outEnd / TOTAL, easing: easeIn },
+          { opacity: 0, transform: 'translateY(-20px)', o: 1 },
+        ]), { duration: TOTAL, fill: 'both' });
+      }
+
+      // --- Scene index + watermark fade (quick, low-noise) ---
+      ['.scene-index', '.watermark'].forEach(function (sel, j) {
+        const el = root.querySelector(sel);
+        if (!el) return;
+        const delay = 350 + j * 100;
+        const start = inStart + delay;
+        const end = start + 400;
+        el.animate(mkFrames([
+          { opacity: 0, o: 0 },
+          { opacity: 0, o: Math.max(0, start - 1) / TOTAL },
+          { opacity: 1, o: end / TOTAL },
+          { opacity: 1, o: outStart / TOTAL },
+          { opacity: 0, o: outEnd / TOTAL },
+          { opacity: 0, o: 1 },
+        ]), { duration: TOTAL, fill: 'both', easing: 'linear' });
+      });
+
+      // --- Caption (bottom pill) for this sentence ---
+      const cap = document.getElementById('cap-' + (i + 1));
+      if (cap) {
+        const capStart = sc.s + 80;  // slight offset after scene begins
+        const capEnd = sc.e - 80;
+        cap.animate(mkFrames([
+          { opacity: 0, transform: 'translateX(-50%) translateY(12px)', o: 0 },
+          { opacity: 0, transform: 'translateX(-50%) translateY(12px)', o: Math.max(0, capStart - 200) / TOTAL },
+          { opacity: 1, transform: 'translateX(-50%) translateY(0px)',  o: capStart / TOTAL, easing: easeOut },
+          { opacity: 1, transform: 'translateX(-50%) translateY(0px)',  o: capEnd / TOTAL },
+          { opacity: 0, transform: 'translateX(-50%) translateY(-8px)', o: Math.min(1, (capEnd + 200) / TOTAL), easing: easeIn },
+          { opacity: 0, transform: 'translateX(-50%) translateY(-8px)', o: 1 },
+        ]), { duration: TOTAL, fill: 'both' });
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

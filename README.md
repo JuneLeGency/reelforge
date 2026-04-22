@@ -135,7 +135,7 @@ Takeaways:
 - ✅ **M4a — TTS product consumption** — BYO audio/timings, whisper.cpp integration, standalone `stt` + `captions` CLIs, end-to-end GPU-TTS intro demo
 - 🟡 **M4b — Ecosystem polish** — ✅ Skills packs (`/reelforge`, `/reelforge-dsl`, `/reelforge-cli`); 🔜 cloud deploy templates (Lambda / Docker), Canvas-generator frontend, Remotion-style WebCodecs renderer
 
-Full roadmap in [DESIGN.md §11](./DESIGN.md#11-路线图).
+Full roadmap in [DESIGN.md §11](./DESIGN.md#11-路线图). **Frank gap analysis vs Hyperframes / Remotion / Revideo**: [GAPS.md](./GAPS.md) — what we deliberately don't have, and prioritized next steps.
 
 ## Contributing
 
