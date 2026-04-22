@@ -9,6 +9,12 @@ import type { VisualStyle } from './types';
  * typography are all original (no direct copy) but the structure —
  * "style pack = background + palette + ink colours + fonts" — is the
  * same bottom-up idea.
+ *
+ * For the **design rationale** of each style — palette logic, font
+ * choice, recommended easing, anti-patterns, template pairings — see
+ * DESIGN.md in this directory. Agents picking a style for a user
+ * should consult DESIGN.md, especially the per-style "Anti-patterns"
+ * sections.
  */
 
 const SANS_CJK =

@@ -203,13 +203,12 @@ Reelforge 已有的**核心能力不比 Hyperframes 少**(甚至在 FFmpeg fast 
 - 其他模板未强改 easing,留给后续按 visual-style 或 extras 选择性启用
 - 测试:24 新单测(physics / transform parse / expand)+ 1 端到端(HTML 里 plans JSON 验证 spring-bouncy → linear + >30 keyframes)
 
-**[ ] #R2 visual-styles.md 设计指引文档(半天)**
-- 为 6 个 named styles 各写一段 500-700 字的风格描述
-- 每个 style 绑定:调色板、字体栈、**GSAP/WAAPI easing 签名**、动画节奏(slow & confident / fast & snappy / ...)、**anti-patterns**(什么是这个风格不会做的)
-- 文件: `packages/cli/src/visual-styles/DESIGN.md`(或者独立 `docs/visual-styles.md`)
-- agent 按这个文档能给用户产出可复现的视觉质量
-- **参考**: `ref/hyperframes/skills/hyperframes/visual-styles.md` (1.2k 行,Müller-Brockmann / Vignelli / Brody 等设计师风格与 GSAP easing 的映射)
-- **价值**: agent 产出质量直接上一档,不需要 agent 自己设计风格
+**[x] #R2 visual-styles.md 设计指引文档** → 完成
+- `packages/cli/src/visual-styles/DESIGN.md`:6 个 style 每一个都有调色逻辑 / 字体规则 / 动画签名 / 适合场景 / **anti-patterns**
+- 新增"风格 × 模板推荐搭配"矩阵表(11 模板 × 6 风格)
+- `presets.ts` jsdoc 顶部指向 DESIGN.md,agent 选 style 时会读到
+- Anti-patterns 清单是关键 —— "这个风格不会做什么" 比"会做什么"更能锁定视觉一致性
+- **参考**: `ref/hyperframes/skills/hyperframes/visual-styles.md` (格式参考,内容完全原创)
 
 **[ ] #R3 6 个新 CSS overlay effects(1 天,chrome-effects 从 4 扩到 10)**
 - `rgb-split` — 多层 text-shadow + transform 错位做 chromatic aberration
