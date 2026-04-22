@@ -22,6 +22,7 @@
     "@reelforge/captions": "workspace:*",
     "@reelforge/dsl": "workspace:*",
     "@reelforge/engine-chrome": "workspace:*",
+    "@reelforge/engine-ffmpeg": "workspace:*",
     "@reelforge/html": "workspace:*",
     "@reelforge/ir": "workspace:*",
     "@reelforge/mcp": "workspace:*",

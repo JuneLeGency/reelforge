@@ -28,6 +28,7 @@
         "@reelforge/captions": "workspace:*",
         "@reelforge/dsl": "workspace:*",
         "@reelforge/engine-chrome": "workspace:*",
+        "@reelforge/engine-ffmpeg": "workspace:*",
         "@reelforge/html": "workspace:*",
         "@reelforge/ir": "workspace:*",
         "@reelforge/mcp": "workspace:*",
@@ -51,6 +52,14 @@
       "dependencies": {
         "@reelforge/ir": "workspace:*",
         "puppeteer-core": "^23.11.1",
+      },
+    },
+    "packages/engine-ffmpeg": {
+      "name": "@reelforge/engine-ffmpeg",
+      "version": "0.0.0",
+      "dependencies": {
+        "@reelforge/ir": "workspace:*",
+        "@reelforge/mux": "workspace:*",
       },
     },
     "packages/html": {
@@ -125,6 +134,8 @@
     "@reelforge/dsl": ["@reelforge/dsl@workspace:packages/dsl"],
 
     "@reelforge/engine-chrome": ["@reelforge/engine-chrome@workspace:packages/engine-chrome"],
+
+    "@reelforge/engine-ffmpeg": ["@reelforge/engine-ffmpeg@workspace:packages/engine-ffmpeg"],
 
     "@reelforge/html": ["@reelforge/html@workspace:packages/html"],
 

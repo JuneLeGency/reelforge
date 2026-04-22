@@ -4,8 +4,15 @@ import { defineCommand } from 'citty';
 import { compileDslFile } from '@reelforge/dsl';
 import { compileHtmlFile } from '@reelforge/html';
 import { renderChrome } from '@reelforge/engine-chrome';
+import {
+  canUseFastPath,
+  explainFastPath,
+  renderFfmpeg,
+} from '@reelforge/engine-ffmpeg';
 import { burnSubtitles, muxAudio } from '@reelforge/mux';
 import { resolveChrome } from '../util/chrome';
+
+type EngineChoice = 'auto' | 'chrome' | 'ffmpeg';
 
 export const renderCommand = defineCommand({
   meta: {
@@ -23,6 +30,12 @@ export const renderCommand = defineCommand({
       alias: 'o',
       description: 'Output MP4 path',
       default: 'out/video.mp4',
+    },
+    engine: {
+      type: 'string',
+      description:
+        'Render backend: auto (chrome for HTML / fast path when eligible), chrome, or ffmpeg',
+      default: 'auto',
     },
     chrome: {
       type: 'string',
@@ -53,17 +66,8 @@ export const renderCommand = defineCommand({
     },
   },
   async run({ args }) {
-    const chromePath =
-      args.chrome ?? resolveChrome({ envValue: process.env.CHROME_PATH });
-    if (!chromePath) {
-      console.error(
-        'Could not find Chrome/Chromium. Install it or pass --chrome <path>.',
-      );
-      process.exit(2);
-    }
-
     const outputPath = resolvePath(args.output);
-    const silentPath = join(dirname(outputPath), `__silent_${Date.now()}.mp4`);
+    const engine = (args.engine as EngineChoice) ?? 'auto';
 
     console.error(`→ compiling ${args.input}`);
     const ext = extname(args.input).toLowerCase();
@@ -76,10 +80,62 @@ export const renderCommand = defineCommand({
       process.exit(3);
     }
 
+    const fastEligible = canUseFastPath(compiled.project);
+    const useFfmpeg =
+      engine === 'ffmpeg' ||
+      (engine === 'auto' && (ext === '.json' || ext === '.json5') && fastEligible);
+
+    if (engine === 'ffmpeg' && !fastEligible) {
+      console.error(
+        `Fast path not eligible: ${explainFastPath(compiled.project)}`,
+      );
+      console.error(`Falling back to Chrome.`);
+    }
+
+    const useEngineFfmpeg = useFfmpeg && (engine === 'ffmpeg' || fastEligible);
+
+    const { width, height, fps } = compiled.project.config;
     console.error(
-      `→ rendering ${compiled.project.config.width}x${compiled.project.config.height} @ ${compiled.project.config.fps}fps`,
+      `→ rendering ${width}x${height} @ ${fps}fps (engine: ${useEngineFfmpeg ? 'ffmpeg' : 'chrome'})`,
     );
-    const progressEvery = Math.max(1, Math.floor(compiled.project.config.fps));
+
+    const needsBurn = Boolean(args.burnSubtitles);
+
+    if (useEngineFfmpeg) {
+      const muxOutput = needsBurn
+        ? join(dirname(outputPath), `__premux_${Date.now()}.mp4`)
+        : outputPath;
+      await renderFfmpeg({
+        project: compiled.project,
+        baseDir: compiled.baseDir,
+        outputPath: muxOutput,
+        ffmpegBinary: args.ffmpeg,
+      });
+      if (needsBurn) {
+        await burnSubtitles({
+          videoPath: muxOutput,
+          subtitlesPath: resolvePath(args.burnSubtitles as string),
+          outputPath,
+          ffmpegBinary: args.ffmpeg,
+          ...(args.subtitleStyle ? { style: args.subtitleStyle } : {}),
+        });
+        await unlink(muxOutput).catch(() => undefined);
+      }
+      console.error(`✓ ${outputPath}`);
+      return;
+    }
+
+    const chromePath =
+      args.chrome ?? resolveChrome({ envValue: process.env.CHROME_PATH });
+    if (!chromePath) {
+      console.error(
+        'Could not find Chrome/Chromium. Install it or pass --chrome <path>.',
+      );
+      process.exit(2);
+    }
+
+    const silentPath = join(dirname(outputPath), `__silent_${Date.now()}.mp4`);
+    const progressEvery = Math.max(1, Math.floor(fps));
     await renderChrome({
       project: compiled.project,
       htmlPath: compiled.htmlPath,
@@ -96,7 +152,7 @@ export const renderCommand = defineCommand({
     process.stderr.write('\n');
 
     console.error(`→ muxing audio`);
-    const muxOutput = args.burnSubtitles
+    const muxOutput = needsBurn
       ? join(dirname(outputPath), `__premux_${Date.now()}.mp4`)
       : outputPath;
     const { audioClipCount } = await muxAudio({
@@ -111,11 +167,11 @@ export const renderCommand = defineCommand({
       await unlink(silentPath).catch(() => undefined);
     }
 
-    if (args.burnSubtitles) {
+    if (needsBurn) {
       console.error(`→ burning subtitles`);
       await burnSubtitles({
         videoPath: muxOutput,
-        subtitlesPath: resolvePath(args.burnSubtitles),
+        subtitlesPath: resolvePath(args.burnSubtitles as string),
         outputPath,
         ffmpegBinary: args.ffmpeg,
         ...(args.subtitleStyle ? { style: args.subtitleStyle } : {}),
