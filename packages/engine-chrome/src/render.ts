@@ -26,6 +26,15 @@ export interface RenderChromeOptions {
    * `planDuration(project) * project.config.fps`.
    */
   frameCount?: number;
+  /**
+   * First frame index to render (inclusive). Used by renderChromeParallel
+   * to divide a timeline across workers. Defaults to 0.
+   */
+  frameStart?: number;
+  /**
+   * Last frame index to render (exclusive). Defaults to frameCount.
+   */
+  frameEnd?: number;
   onProgress?: (p: { frame: number; total: number }) => void;
   /**
    * Opt into the `HeadlessExperimental.beginFrame` capture path. Deterministic
@@ -57,6 +66,9 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
   const { width, height, fps } = project.config;
   const durationMs = planDuration(project);
   const totalFrames = opts.frameCount ?? Math.max(1, Math.ceil((durationMs / 1000) * fps));
+  const frameStart = Math.max(0, opts.frameStart ?? 0);
+  const frameEnd = Math.min(totalFrames, opts.frameEnd ?? totalFrames);
+  const segmentFrames = Math.max(0, frameEnd - frameStart);
   const frameStepMs = 1000 / fps;
 
   await mkdir(dirname(resolvePath(outputPath)), { recursive: true });
@@ -105,7 +117,7 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
       };
     }
 
-    for (let frame = 0; frame < totalFrames; frame++) {
+    for (let frame = frameStart; frame < frameEnd; frame++) {
       const timeMs = frame * frameStepMs;
       await page.evaluate(async (t: number) => {
         const w = window as unknown as {
@@ -115,7 +127,7 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
       }, timeMs);
       const buffer = await captureFrame(timeMs);
       await ff.write(buffer);
-      opts.onProgress?.({ frame: frame + 1, total: totalFrames });
+      opts.onProgress?.({ frame: frame - frameStart + 1, total: segmentFrames });
     }
   } finally {
     await browser.close().catch(() => undefined);
@@ -123,5 +135,5 @@ export async function renderChrome(opts: RenderChromeOptions): Promise<RenderChr
 
   await ff.finish();
 
-  return { outputPath, frameCount: totalFrames, durationMs };
+  return { outputPath, frameCount: segmentFrames, durationMs };
 }

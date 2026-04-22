@@ -76,13 +76,14 @@ Full detail in [DESIGN.md](./DESIGN.md).
 | [`@reelforge/captions`](./packages/captions) | Word-timings → captions, TikTok-style pagination, SRT round-trip |
 | [`@reelforge/html`](./packages/html) | HTML frontend — compile `data-*`-annotated HTML into IR |
 | [`@reelforge/dsl`](./packages/dsl) | JSON5 DSL frontend — editly-style clip/layer config → HTML → IR |
-| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI / image / video), image2pipe → ffmpeg, opt-in BeginFrame CDP path |
+| [`@reelforge/engine-chrome`](./packages/engine-chrome) | Chrome backend — library-clock adapters (GSAP / WAAPI / image / video), image2pipe → ffmpeg, opt-in BeginFrame CDP path, parallel frame segments |
+| [`@reelforge/engine-ffmpeg`](./packages/engine-ffmpeg) | Fast-path backend — IR → ffmpeg `filter_complex` → mp4, no Chrome, ~13× faster on slide-only projects |
 | [`@reelforge/mux`](./packages/mux) | Mix IR audio clips onto silent video (`atrim` + `adelay` + `amix`), optional libass subtitle burn |
 | [`@reelforge/providers-tts-elevenlabs`](./packages/providers-tts-elevenlabs) | ElevenLabs TTS with character-level alignment → word timings |
 | [`@reelforge/mcp`](./packages/mcp) | MCP server — exposes compile / introspect tools to AI agents over stdio |
 | [`@reelforge/cli`](./packages/cli) | `reelforge render` / `generate` / `preview` / `init` / `tts` / `mcp` |
 
-**167 tests across 9 packages, all green.**
+**186 tests across 10 packages, all green.**
 
 ## Design principles
 
@@ -97,8 +98,8 @@ Full detail in [DESIGN.md](./DESIGN.md).
 - ✅ **M0 — Architecture and skeleton** — IR contract, monorepo, toolchain, DESIGN.md
 - ✅ **M1 — End-to-end MVP** — HTML + Chrome engine + ElevenLabs TTS + mux + CLI
 - ✅ **M2 — Multiple frontends + agent integration** — JSON5 DSL, `generate` pipeline with TikTok-style word highlights, MCP server with 4 structured tools
-- 🟡 **M3 — Multiple backends** — ✅ BeginFrame CDP opt-in; 🔜 FFmpeg fast path, Canvas + generators, parallel frame segments
-- 🔜 **M4 — Ecosystem** — cloud deploy templates, more TTS/STT/image providers, Skills for agents, community marketplace
+- ✅ **M3 — Multiple backends** — BeginFrame CDP opt-in; FFmpeg fast path (`--engine ffmpeg` → ~13× speedup on slide projects); parallel frame segments (`--parallelism N` on Chrome, ~2× at 4 workers). 🔜 Canvas + generators.
+- 🟡 **M4 — Ecosystem** — ✅ Skills packs for Claude Code / Cursor / Codex. 🔜 cloud deploy templates, more TTS/STT/image providers, community marketplace
 
 Full roadmap in [DESIGN.md §11](./DESIGN.md#11-路线图).
 

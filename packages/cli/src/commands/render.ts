@@ -3,7 +3,7 @@ import { dirname, extname, join, resolve as resolvePath } from 'node:path';
 import { defineCommand } from 'citty';
 import { compileDslFile } from '@reelforge/dsl';
 import { compileHtmlFile } from '@reelforge/html';
-import { renderChrome } from '@reelforge/engine-chrome';
+import { renderChrome, renderChromeParallel } from '@reelforge/engine-chrome';
 import {
   canUseFastPath,
   explainFastPath,
@@ -63,6 +63,11 @@ export const renderCommand = defineCommand({
       type: 'boolean',
       description: 'Use HeadlessExperimental.beginFrame for deterministic atomic frame capture (Linux-optimised; disables <video> / <audio> playback)',
       default: false,
+    },
+    parallelism: {
+      type: 'string',
+      description: 'Number of concurrent Chrome workers (Chrome path only). 1 = single-process (default).',
+      default: '1',
     },
   },
   async run({ args }) {
@@ -136,19 +141,39 @@ export const renderCommand = defineCommand({
 
     const silentPath = join(dirname(outputPath), `__silent_${Date.now()}.mp4`);
     const progressEvery = Math.max(1, Math.floor(fps));
-    await renderChrome({
-      project: compiled.project,
-      htmlPath: compiled.htmlPath,
-      outputPath: silentPath,
-      executablePath: chromePath,
-      ffmpegBinary: args.ffmpeg,
-      useBeginFrame: args.useBeginFrame,
-      onProgress: ({ frame, total }) => {
-        if (frame % progressEvery === 0 || frame === total) {
-          process.stderr.write(`\r  frame ${frame}/${total}`);
-        }
-      },
-    });
+    const parallelism = Math.max(1, Number.parseInt(args.parallelism, 10) || 1);
+
+    if (parallelism > 1) {
+      console.error(`  parallelism=${parallelism}`);
+      await renderChromeParallel({
+        project: compiled.project,
+        htmlPath: compiled.htmlPath,
+        outputPath: silentPath,
+        executablePath: chromePath,
+        ffmpegBinary: args.ffmpeg,
+        useBeginFrame: args.useBeginFrame,
+        parallelism,
+        onProgress: ({ frame, total }: { frame: number; total: number; shard: number }) => {
+          if (frame % progressEvery === 0 || frame === total) {
+            process.stderr.write(`\r  frame ${frame}/${total}`);
+          }
+        },
+      });
+    } else {
+      await renderChrome({
+        project: compiled.project,
+        htmlPath: compiled.htmlPath,
+        outputPath: silentPath,
+        executablePath: chromePath,
+        ffmpegBinary: args.ffmpeg,
+        useBeginFrame: args.useBeginFrame,
+        onProgress: ({ frame, total }) => {
+          if (frame % progressEvery === 0 || frame === total) {
+            process.stderr.write(`\r  frame ${frame}/${total}`);
+          }
+        },
+      });
+    }
     process.stderr.write('\n');
 
     console.error(`→ muxing audio`);
