@@ -146,6 +146,63 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
     );
   }
 
+  // Global page counter (01 / N) — one small overlay per slide, fade
+  // keyed to each slide's startMs / endMs. Single source of truth so
+  // every template gets a consistent indicator without duplicating
+  // scene-index HTML into each template.
+  const hasPageCounter = slides.length > 1;
+  const pageCounterHtml = hasPageCounter
+    ? `    <div class="rf-page-counter">
+${slides
+  .map(
+    (_s, i) =>
+      `      <div class="rf-page" data-i="${i}">${String(i + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}</div>`,
+  )
+  .join('\n')}
+    </div>`
+    : '';
+  if (hasPageCounter) {
+    for (let i = 0; i < slides.length; i++) {
+      const s = slides[i]!;
+      const fadeInDelay = s.startMs + 200;
+      const fadeInEnd = Math.min(s.endMs, fadeInDelay + 500);
+      const fadeOutStart = Math.max(fadeInEnd + 1, s.endMs - 300);
+      animationPlans.push({
+        selector: `.rf-page[data-i="${i}"]`,
+        animation: {
+          selector: `.rf-page[data-i="${i}"]`,
+          easing: 'linear',
+          keyframes: [
+            { atMs: 0, props: { opacity: 0 } },
+            { atMs: Math.max(0, fadeInDelay - 1), props: { opacity: 0 } },
+            { atMs: fadeInEnd, props: { opacity: 1 } },
+            { atMs: fadeOutStart, props: { opacity: 1 } },
+            { atMs: s.endMs, props: { opacity: 0 } },
+          ],
+        },
+      });
+    }
+  }
+  const PAGE_COUNTER_CSS = hasPageCounter
+    ? `
+  .rf-page-counter {
+    position: absolute; top: 40px; left: 48px;
+    pointer-events: none;
+    z-index: 500;
+    font-family: ${fontFamilyBody};
+  }
+  .rf-page {
+    position: absolute; top: 0; left: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    color: rgba(255,255,255,0.58);
+    opacity: 0;
+    white-space: nowrap;
+  }
+`
+    : '';
+
   // Dedup CSS by template.
   const cssParts: string[] = [];
   for (const name of templatesUsed) {
@@ -194,15 +251,58 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
     );
   }
 
-  // Captions overlay (mirrors buildGenerateHtml shape).
+  // Captions overlay — animations are pushed into animationPlans so they
+  // go through the same manual-keyframes seek path the slides use. If
+  // we left captions on WAAPI el.animate() they'd drift relative to the
+  // frame pipeline (WAAPI animations run on wall-clock under headless
+  // Chrome; the paused-seek interpolation path is unreliable and was
+  // the reason we moved slides off WAAPI in the first place).
   const useTikTok = (tikTokPages?.length ?? 0) > 0;
   let overlayHtml = '';
   let overlayCss = '';
-  let overlayScript = '';
+  const overlayScript = '';
+  const EDGE_MS = 16;
   if (useTikTok) {
     overlayHtml = renderTikTokDivs(tikTokPages!);
     overlayCss = TIKTOK_CSS;
-    overlayScript = renderTikTokScript(tikTokPages!, totalDurationMs);
+    for (let p = 0; p < tikTokPages!.length; p++) {
+      const page = tikTokPages![p]!;
+      const pageStart = Math.round(page.startMs);
+      const pageEnd = Math.round(page.startMs + page.durationMs);
+      animationPlans.push({
+        selector: `#tt-page-${p}`,
+        animation: {
+          selector: `#tt-page-${p}`,
+          easing: 'linear',
+          keyframes: [
+            { atMs: 0, props: { opacity: 0 } },
+            { atMs: Math.max(0, pageStart - EDGE_MS), props: { opacity: 0 } },
+            { atMs: pageStart, props: { opacity: 1 } },
+            { atMs: pageEnd, props: { opacity: 1 } },
+            { atMs: Math.min(totalDurationMs, pageEnd + EDGE_MS), props: { opacity: 0 } },
+          ],
+        },
+      });
+      for (let t = 0; t < page.tokens.length; t++) {
+        const tok = page.tokens[t]!;
+        const s = Math.round(tok.fromMs);
+        const e = Math.round(tok.toMs);
+        animationPlans.push({
+          selector: `#tt-token-${p}-${t}`,
+          animation: {
+            selector: `#tt-token-${p}-${t}`,
+            easing: 'linear',
+            keyframes: [
+              { atMs: 0, props: { color: 'rgba(255,255,255,0.75)' } },
+              { atMs: Math.max(0, s - 1), props: { color: 'rgba(255,255,255,0.75)' } },
+              { atMs: s, props: { color: '#ffe666' } },
+              { atMs: e, props: { color: '#ffe666' } },
+              { atMs: Math.min(totalDurationMs, e + 1), props: { color: 'rgba(255,255,255,0.95)' } },
+            ],
+          },
+        });
+      }
+    }
   } else if (captions && captions.length > 0) {
     overlayHtml = captions
       .map(
@@ -211,7 +311,23 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
       )
       .join('\n');
     overlayCss = CAPTION_CSS;
-    overlayScript = renderCaptionScript(captions, totalDurationMs);
+    for (let i = 0; i < captions.length; i++) {
+      const c = captions[i]!;
+      animationPlans.push({
+        selector: `#caption-${i}`,
+        animation: {
+          selector: `#caption-${i}`,
+          easing: 'linear',
+          keyframes: [
+            { atMs: 0, props: { opacity: 0 } },
+            { atMs: Math.max(0, c.startMs - EDGE_MS), props: { opacity: 0 } },
+            { atMs: c.startMs, props: { opacity: 1 } },
+            { atMs: c.endMs, props: { opacity: 1 } },
+            { atMs: Math.min(totalDurationMs, c.endMs + EDGE_MS), props: { opacity: 0 } },
+          ],
+        },
+      });
+    }
   }
 
   // Build the per-animation <script>. Keyframes are translated from
@@ -263,6 +379,7 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
     .slide .title { font-family: ${fontFamilyHeading}; }
     .slide .subtitle { font-family: ${fontFamilyBody}; }
 ${cssParts.join('\n')}
+${PAGE_COUNTER_CSS}
 ${[...effectCssSet].join('\n')}
 ${overlayCss}
 ${styleExtraCss}
@@ -271,6 +388,7 @@ ${styleExtraCss}
 <body>
   <div id="stage">
 ${parts.join('\n')}
+${pageCounterHtml}
 ${effectHtmlParts.join('\n')}
 ${overlayHtml}
 ${audioTag}
@@ -300,20 +418,22 @@ ${audioTag}
 const CAPTION_CSS = `
   .caption {
     position: absolute;
-    left: 50%; bottom: 8vh;
+    left: 50%; bottom: 3vh;
     transform: translateX(-50%);
-    max-width: 80vw;
+    max-width: 72vw;
     text-align: center;
-    font-size: 36px; font-weight: 600;
+    font-size: 22px; font-weight: 600;
     line-height: 1.3;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.55);
-    padding: 14px 28px;
-    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.94);
+    background: rgba(0, 0, 0, 0.56);
+    padding: 7px 18px;
+    border-radius: 8px;
     opacity: 0;
     pointer-events: none;
     white-space: pre-wrap;
     z-index: 1000;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 `;
 

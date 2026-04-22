@@ -108,20 +108,22 @@ export const SPLIT_REVEAL_CSS = `
   .slide-split-reveal .title-split {
     position: relative;
     width: 100%;
-    height: 240px;
+    height: 160px;
     display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
+    overflow: visible;
   }
+  /* Both halves sit on top of each other; clip-path keeps only the top
+     or bottom 50 % of each copy. When the two copies animate to the
+     same position they reconstruct one complete glyph (top 50 % + bottom
+     50 %), with the center-line running exactly through the split seam. */
   .slide-split-reveal .split-top,
   .slide-split-reveal .split-bottom {
     position: absolute;
-    left: 0; right: 0;
-    height: 50%;
-    overflow: hidden;
+    left: 0; right: 0; top: 0; bottom: 0;
     display: flex; align-items: center; justify-content: center;
   }
-  .slide-split-reveal .split-top { top: 0; align-items: flex-end; }
-  .slide-split-reveal .split-bottom { bottom: 0; align-items: flex-start; }
+  .slide-split-reveal .split-top    { clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); }
+  .slide-split-reveal .split-bottom { clip-path: polygon(0 50%, 100% 50%, 100% 100%, 0 100%); }
   .slide-split-reveal .split-top span,
   .slide-split-reveal .split-bottom span {
     display: inline-block;

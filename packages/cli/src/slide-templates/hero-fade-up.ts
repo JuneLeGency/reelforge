@@ -30,11 +30,15 @@ export const heroFadeUp: SlideTemplate = (spec: SlideSpec): SlideRenderOutput =>
   const outEnd = endMs;
 
   const id = `slide-${index}`;
+  // scene-index is now handled globally by render-composition — removed
+  // here to avoid rendering it twice. indexLabel / totalLabel kept
+  // available on spec.extras for templates that still want a local pill.
+  void indexLabel;
+  void totalLabel;
   const html = `
   <section class="slide slide-hero-fade-up${hasImage ? ' has-bg-image' : ''}" id="${id}" data-slide-index="${index}">
     ${hasImage ? `<img class="bg-image" src="${escapeAttr(image)}" alt="">` : ''}
     ${hasImage ? `<div class="bg-scrim"></div>` : ''}
-    ${indexLabel !== '' ? `<div class="scene-index">${escapeText(indexLabel)}${totalLabel !== '' ? ` / ${escapeText(totalLabel)}` : ''}</div>` : ''}
     <div class="accent-rule"></div>
     ${title !== '' ? `<h1 class="title">${escapeText(title)}</h1>` : ''}
     ${subtitle !== '' ? `<div class="subtitle">${escapeText(subtitle)}</div>` : ''}
@@ -93,18 +97,6 @@ export const heroFadeUp: SlideTemplate = (spec: SlideSpec): SlideRenderOutput =>
           { atMs: inStart + 480 + 650, props: { opacity: 1, transform: 'translateY(0px)' } },
           { atMs: outStart, props: { opacity: 1, transform: 'translateY(0px)' } },
           { atMs: outEnd, props: { opacity: 0, transform: 'translateY(-16px)' } },
-        ],
-      },
-      // scene index pop
-      {
-        selector: sel('.scene-index'),
-        easing: 'linear',
-        keyframes: [
-          { atMs: 0, props: { opacity: 0 } },
-          { atMs: Math.max(0, inStart + 350 - 1), props: { opacity: 0 } },
-          { atMs: inStart + 350 + 400, props: { opacity: 1 } },
-          { atMs: outStart, props: { opacity: 1 } },
-          { atMs: outEnd, props: { opacity: 0 } },
         ],
       },
       // watermark pop

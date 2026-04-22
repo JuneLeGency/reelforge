@@ -203,7 +203,9 @@ describe('heroFadeUp template', () => {
     expect(out.html).toContain('class="title"');
     expect(out.html).toContain('class="subtitle"');
     expect(out.html).toContain('class="accent-rule"');
-    expect(out.html).toContain('class="scene-index"');
+    // scene-index was retired from hero-fade-up — page counter is now a
+    // global overlay injected by render-composition instead.
+    expect(out.html).not.toContain('class="scene-index"');
     expect(out.html).toContain('class="watermark"');
   });
 
