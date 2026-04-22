@@ -51,9 +51,12 @@ export const kineticType: SlideTemplate = (spec: SlideSpec): SlideRenderOutput =
     const delay = inStart + 220 + i * STAGGER_MS;
     // Reverse stagger for the exit so the last char leaves first.
     const exitDelay = outStart + i * 12;
+    // Spring entrance → letters overshoot and settle, which reads as
+    // "kinetic" typography. render-composition expands this into
+    // dense linear keyframes per segment (see slide-templates/spring.ts).
     return {
       selector: sel(`.char[data-i="${i}"]`),
-      easing: 'cubic-bezier(.22,.9,.32,1)',
+      easing: 'spring-bouncy',
       keyframes: [
         { atMs: 0, props: { opacity: 0, transform: 'translateY(22px) rotate(12deg)' } },
         {

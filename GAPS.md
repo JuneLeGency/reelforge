@@ -194,13 +194,14 @@ Reelforge 已有的**核心能力不比 Hyperframes 少**(甚至在 FFmpeg fast 
 
 ---
 
-**[ ] #R1 Spring easing 暴露到 DSL + 模板(1 天)**
-- 在 `@reelforge/ir` `ProjectConfig.animation` 或 slide template 的 `easing` 字段支持 `'spring(0.5, 15)'` 语法
-- WAAPI 不原生支持 spring,需要在 render-composition 生成 keyframes 时展开成多帧(~20 帧近似),或者用 linear timing-function 配合 pre-sampled 数值
-- 或者简单做法:注册几个预置 spring 曲线(`spring-soft`、`spring-bouncy`、`spring-stiff`),用现成 easing 字符串常量
-- 覆盖所有 11 个模板的 easing 字段
-- **参考**: `ref/motion-canvas/packages/core/src/lib/curves/`、`ref/remotion/packages/animation-utils/src/`
-- **价值**: 立刻升级 11 个模板的"有机感"(overshoot / bounce),视觉质感最直接的一刀
+**[x] #R1 Spring easing 暴露到 DSL + 模板** → 完成
+- `packages/cli/src/slide-templates/spring.ts`:3 个预置 `spring-soft` / `spring-bouncy` / `spring-stiff`,damped harmonic oscillator 物理模拟(semi-implicit Euler,`sampleSpring` 可 overshoot)
+- `parseTransform` / `serializeTransform` 处理 `translateY(22px) rotate(12deg)` 多函数单参数(多参数 comma 场景 fall back linear,不破坏)
+- `expandSpringAnimation` 展开为 ~16 帧 linear per segment,WAAPI 可直接消费
+- `render-composition.ts` 自动探测 `spring-*` easing 并展开 —— 模板作者直接写 `easing: 'spring-bouncy'` 就行
+- `kinetic-type` 默认启用 spring-bouncy:每个字符 cascade 入场时 overshoot,kinetic typography 的标志效果
+- 其他模板未强改 easing,留给后续按 visual-style 或 extras 选择性启用
+- 测试:24 新单测(physics / transform parse / expand)+ 1 端到端(HTML 里 plans JSON 验证 spring-bouncy → linear + >30 keyframes)
 
 **[ ] #R2 visual-styles.md 设计指引文档(半天)**
 - 为 6 个 named styles 各写一段 500-700 字的风格描述

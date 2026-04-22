@@ -745,6 +745,34 @@ describe('renderTemplatedComposition', () => {
     expect(matches.length).toBe(1);
   });
 
+  test('spring easing on a template expands into dense linear keyframes in final HTML', () => {
+    // kinetic-type opts into spring-bouncy for its per-char entrance.
+    // After render-composition, the inline plans JSON should (a) not
+    // contain the literal "spring-bouncy" (it's been resolved) and
+    // (b) show "easing":"linear" on those .char[data-i=...] animations.
+    const html = renderTemplatedComposition({
+      width: 1280,
+      height: 720,
+      fps: 30,
+      totalDurationMs: 3000,
+      slides: [
+        { template: 'kinetic-type', title: 'Hi', startMs: 0, endMs: 3000 },
+      ],
+    });
+    expect(html).not.toContain('spring-bouncy');
+    // The .char animations were spring-expanded → linear.
+    // Find any `.char[data-i=...]` plan entry in the JSON.
+    const charPlanRe =
+      /\{"selector":"#slide-0 \.char\[data-i=\\"0\\"\]","easing":"([^"]+)","keyframes":\[([^\]]+)\]\}/;
+    const m = html.match(charPlanRe);
+    expect(m).not.toBeNull();
+    expect(m![1]).toBe('linear');
+    // Expanded keyframes should be substantially denser than the
+    // 5-keyframe source animation.
+    const keyframeEntries = (m![2]!.match(/\{"atMs"/g) || []).length;
+    expect(keyframeEntries).toBeGreaterThan(30);
+  });
+
   test('quote-card and photo-card CSS blocks only appear when used', () => {
     const html = renderTemplatedComposition({
       width: 1280,

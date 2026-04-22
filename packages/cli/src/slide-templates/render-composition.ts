@@ -7,6 +7,7 @@ import {
 import type { SlideAnimation, SlideSpec } from './types';
 import { listTemplateNames, resolveTemplate } from './registry';
 import { escapeAttr, escapeText } from './escape';
+import { expandSpringAnimation, isSpringEasingName } from './spring';
 import { listVisualStyleNames, resolveVisualStyle, type VisualStyle } from '../visual-styles';
 
 /**
@@ -216,25 +217,32 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
   // Build the per-animation <script>. Keyframes are translated from
   // absolute ms to WAAPI offsets (0..1) inside the browser, not here —
   // simpler to serialise, and keeps the template code readable.
+  //
+  // Spring easings (`spring-soft` / `spring-bouncy` / `spring-stiff`) are
+  // expanded here into dense linear keyframes. WAAPI can't overshoot with
+  // cubic-bezier, so we pre-sample the spring physics. See ./spring.ts.
   const combinedPlans: Array<{
     selector: string;
     easing: string;
     keyframes: Array<{ atMs: number; props: Record<string, string | number> }>;
   }> = [];
-  for (const p of animationPlans) {
+  const pushPlan = (selector: string, animation: SlideAnimation | ChromeEffectAnimation) => {
+    const normalized: SlideAnimation = {
+      selector,
+      keyframes: animation.keyframes.map((kf) => ({ atMs: kf.atMs, props: kf.props })),
+      ...(animation.easing !== undefined ? { easing: animation.easing } : {}),
+    };
+    const expanded = isSpringEasingName(normalized.easing)
+      ? expandSpringAnimation(normalized)
+      : normalized;
     combinedPlans.push({
-      selector: p.selector,
-      easing: p.animation.easing ?? 'linear',
-      keyframes: p.animation.keyframes.map((kf) => ({ atMs: kf.atMs, props: kf.props })),
+      selector: expanded.selector,
+      easing: expanded.easing ?? 'linear',
+      keyframes: expanded.keyframes.map((kf) => ({ atMs: kf.atMs, props: kf.props })),
     });
-  }
-  for (const p of effectAnimPlans) {
-    combinedPlans.push({
-      selector: p.selector,
-      easing: p.animation.easing ?? 'linear',
-      keyframes: p.animation.keyframes.map((kf) => ({ atMs: kf.atMs, props: kf.props })),
-    });
-  }
+  };
+  for (const p of animationPlans) pushPlan(p.selector, p.animation);
+  for (const p of effectAnimPlans) pushPlan(p.selector, p.animation);
   const animsJson = JSON.stringify(combinedPlans);
 
   const audioTag =
