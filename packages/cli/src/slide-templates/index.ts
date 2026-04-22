@@ -17,3 +17,8 @@ export { quoteCard, QUOTE_CARD_CSS } from './quote-card';
 export { kineticType, KINETIC_TYPE_CSS } from './kinetic-type';
 export { logoOutro, LOGO_OUTRO_CSS } from './logo-outro';
 export { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
+export { testimonial, TESTIMONIAL_CSS } from './testimonial';
+export { lowerThird, LOWER_THIRD_CSS } from './lower-third';
+export { pictureInPicture, PIP_CSS } from './picture-in-picture';
+export { timelineRoadmap, TIMELINE_ROADMAP_CSS } from './timeline-roadmap';
+export { endCard, END_CARD_CSS } from './end-card';

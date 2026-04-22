@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   bulletStagger,
   dataChartReveal,
+  endCard,
   heroFadeUp,
   imageLeftText,
   imageRightText,
@@ -9,11 +10,15 @@ import {
   kineticType,
   listTemplateNames,
   logoOutro,
+  lowerThird,
   photoCard,
+  pictureInPicture,
   quoteCard,
   renderTemplatedComposition,
   resolveTemplate,
   splitReveal,
+  testimonial,
+  timelineRoadmap,
 } from '../slide-templates';
 
 describe('SLIDE_TEMPLATES registry', () => {
@@ -22,15 +27,20 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(names).toEqual([
       'bullet-stagger',
       'data-chart-reveal',
+      'end-card',
       'hero-fade-up',
       'image-left-text',
       'image-right-text',
       'ken-burns-zoom',
       'kinetic-type',
       'logo-outro',
+      'lower-third',
       'photo-card',
+      'picture-in-picture',
       'quote-card',
       'split-reveal',
+      'testimonial',
+      'timeline-roadmap',
     ]);
   });
 
@@ -52,6 +62,11 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('kinetic-type')).toBe(kineticType);
     expect(resolveTemplate('logo-outro')).toBe(logoOutro);
     expect(resolveTemplate('data-chart-reveal')).toBe(dataChartReveal);
+    expect(resolveTemplate('testimonial')).toBe(testimonial);
+    expect(resolveTemplate('lower-third')).toBe(lowerThird);
+    expect(resolveTemplate('picture-in-picture')).toBe(pictureInPicture);
+    expect(resolveTemplate('timeline-roadmap')).toBe(timelineRoadmap);
+    expect(resolveTemplate('end-card')).toBe(endCard);
   });
 });
 
@@ -555,6 +570,254 @@ describe('dataChartReveal template', () => {
     });
     expect(out.html).toContain('>No data<');
     expect((out.html.match(/class="bar-col"/g) || []).length).toBe(0);
+  });
+});
+
+describe('testimonial template', () => {
+  test('renders portrait + quote body + attribution + company tag', () => {
+    const out = testimonial({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Reelforge cut our video production time in half.',
+      subtitle: 'Jane Doe, CTO',
+      image: 'jane.jpg',
+      extras: { company: 'ACME' },
+    });
+    expect(out.html).toContain('class="portrait-frame"');
+    expect(out.html).toContain('src="jane.jpg"');
+    expect(out.html).toContain('class="glyph"');
+    expect(out.html).toContain('class="company"');
+    expect(out.html).toContain('ACME');
+    expect(out.html).toContain('<blockquote class="quote"');
+    expect(out.html).toContain('class="attribution"');
+  });
+
+  test('company tag is omitted when extras.company absent', () => {
+    const out = testimonial({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'q',
+      subtitle: 'x',
+      image: 'j.jpg',
+    });
+    expect(out.html).not.toContain('class="company"');
+  });
+
+  test('portrait-frame animates with scale (0.85 → 1)', () => {
+    const out = testimonial({ index: 0, startMs: 0, endMs: 4000, image: 'j.jpg' });
+    const portraitAnim = out.animations.find((a) =>
+      a.selector.endsWith('.portrait-frame'),
+    )!;
+    expect(portraitAnim.keyframes[0]!.props.transform).toBe('scale(0.85)');
+  });
+});
+
+describe('lowerThird template', () => {
+  test('renders bar with name / role / accent-strip', () => {
+    const out = lowerThird({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'Jane Doe',
+      subtitle: 'CTO, ACME',
+      extras: { tag: 'LIVE' },
+    });
+    expect(out.html).toContain('class="bar"');
+    expect(out.html).toContain('class="accent-strip"');
+    expect(out.html).toContain('class="name"');
+    expect(out.html).toContain('Jane Doe');
+    expect(out.html).toContain('class="tag"');
+    expect(out.html).toContain('LIVE');
+  });
+
+  test('bar slides in from the left (translateX(-60px) → 0)', () => {
+    const out = lowerThird({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'x',
+    });
+    const barAnim = out.animations.find((a) => a.selector.endsWith('.bar'))!;
+    expect(barAnim.keyframes[0]!.props.transform).toBe('translateX(-60px)');
+  });
+
+  test('accent-strip grows with scaleY (0 → 1)', () => {
+    const out = lowerThird({ index: 0, startMs: 0, endMs: 4000, title: 'x' });
+    const stripAnim = out.animations.find((a) =>
+      a.selector.endsWith('.accent-strip'),
+    )!;
+    expect(stripAnim.keyframes[0]!.props.transform).toBe('scaleY(0)');
+  });
+});
+
+describe('pictureInPicture template', () => {
+  test('renders bg, titleblock, pip-window when all slots set', () => {
+    const out = pictureInPicture({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Live Demo',
+      subtitle: 'Watch how it works',
+      image: 'main.jpg',
+      extras: { pipImage: 'face.jpg' },
+    });
+    expect(out.html).toContain('class="bg"');
+    expect(out.html).toContain('src="main.jpg"');
+    expect(out.html).toContain('class="titleblock"');
+    expect(out.html).toContain('class="pip-window"');
+    expect(out.html).toContain('src="face.jpg"');
+  });
+
+  test('pip window entrance is a scale pop (0.3 → 1)', () => {
+    const out = pictureInPicture({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      image: 'm.jpg',
+      extras: { pipImage: 'f.jpg' },
+    });
+    const pipAnim = out.animations.find((a) =>
+      a.selector.endsWith('.pip-window'),
+    )!;
+    expect(pipAnim.keyframes[0]!.props.transform).toBe('scale(0.3)');
+  });
+
+  test('omits pip-window when extras.pipImage absent', () => {
+    const out = pictureInPicture({
+      index: 0,
+      startMs: 0,
+      endMs: 3000,
+      image: 'm.jpg',
+    });
+    expect(out.html).not.toContain('class="pip-window"');
+  });
+});
+
+describe('timelineRoadmap template', () => {
+  test('parses "Label | period" and "Label: period" bullets', () => {
+    const out = timelineRoadmap({
+      index: 0,
+      startMs: 0,
+      endMs: 6000,
+      title: 'Roadmap',
+      bullets: ['Launch | Q1 2024', 'Series A: 2024-08', 'Global'],
+    });
+    const nodeCount = (out.html.match(/class="node"/g) || []).length;
+    expect(nodeCount).toBe(3);
+    expect(out.html).toContain('>Launch<');
+    expect(out.html).toContain('>Q1 2024<');
+    expect(out.html).toContain('>Series A<');
+    expect(out.html).toContain('>2024-08<');
+    expect(out.html).toContain('>Global<');
+  });
+
+  test('alternates label position above/below per node', () => {
+    const out = timelineRoadmap({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      bullets: ['A | 2024', 'B | 2025', 'C | 2026'],
+    });
+    // Above nodes = index 0 and 2; below = index 1
+    const aboveCount = (out.html.match(/class="node-label above"/g) || []).length;
+    const belowCount = (out.html.match(/class="node-label below"/g) || []).length;
+    expect(aboveCount).toBe(2);
+    expect(belowCount).toBe(1);
+  });
+
+  test('rail scales from 0 to 1 on entrance', () => {
+    const out = timelineRoadmap({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      bullets: ['A | 1', 'B | 2'],
+    });
+    const railAnim = out.animations.find((a) => a.selector.endsWith('.rail'))!;
+    expect(railAnim.keyframes[0]!.props.transform).toBe('scaleX(0)');
+  });
+
+  test('each node gets three animations (dot / label / period)', () => {
+    const out = timelineRoadmap({
+      index: 0,
+      startMs: 0,
+      endMs: 8000,
+      bullets: ['A | 1', 'B | 2', 'C | 3'],
+    });
+    const perNode = out.animations.filter((a) => a.selector.includes('.node['));
+    expect(perNode).toHaveLength(9); // 3 nodes × 3 anims
+  });
+
+  test('node-label animation preserves translateX(-50%) for centering', () => {
+    const out = timelineRoadmap({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: ['A | 1'],
+    });
+    const labelAnim = out.animations.find((a) =>
+      a.selector.endsWith('.node-label'),
+    )!;
+    for (const kf of labelAnim.keyframes) {
+      expect(kf.props.transform as string).toContain('translateX(-50%)');
+    }
+  });
+});
+
+describe('endCard template', () => {
+  test('renders CTA + sub-CTA + three actions by default', () => {
+    const out = endCard({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'Subscribe for more',
+      subtitle: 'New video every Tuesday',
+    });
+    expect(out.html).toContain('class="cta"');
+    expect(out.html).toContain('Subscribe for more');
+    expect(out.html).toContain('class="sub-cta"');
+    const actionCount = (out.html.match(/class="action"/g) || []).length;
+    expect(actionCount).toBe(3);
+  });
+
+  test('custom icons and actions via extras', () => {
+    const out = endCard({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'Follow',
+      extras: { icons: '🎯|📺|🔥', actions: 'Click|Watch|Burn' },
+    });
+    expect(out.html).toContain('>🎯<');
+    expect(out.html).toContain('>Click<');
+    expect(out.html).toContain('>Burn<');
+  });
+
+  test('CTA scale pop (0.7 → 1)', () => {
+    const out = endCard({ index: 0, startMs: 0, endMs: 4000, title: 'x' });
+    const ctaAnim = out.animations.find((a) => a.selector.endsWith('.cta'))!;
+    expect(ctaAnim.keyframes[0]!.props.transform).toBe('scale(0.7)');
+  });
+
+  test('actions stagger 140 ms apart', () => {
+    const out = endCard({
+      index: 0,
+      startMs: 0,
+      endMs: 6000,
+      title: 'x',
+    });
+    const actionStarts = out.animations
+      .filter((a) => a.selector.includes('.action['))
+      .map(
+        (a) =>
+          a.keyframes.find(
+            (kf) => (kf.props.transform as string) === 'translateY(0px) scale(1)',
+          )!.atMs,
+      )
+      .sort((a, b) => a - b);
+    expect(actionStarts[1]! - actionStarts[0]!).toBe(140);
+    expect(actionStarts[2]! - actionStarts[1]!).toBe(140);
   });
 });
 

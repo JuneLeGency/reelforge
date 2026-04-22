@@ -219,14 +219,14 @@ Reelforge 已有的**核心能力不比 Hyperframes 少**(甚至在 FFmpeg fast 
 - `zoom-blur` — 作用于 `#stage` 的 filter: blur(0→7px→0) + scale(1→1.06→1),captions 一起模糊(刻意)
 - 新增 12 个测试,transitions 包 42 pass
 
-**[ ] #R4 5 个企业模板(1 天,模板从 11 扩到 16)**
-- `testimonial` — 半身像 + 语录 + 姓名/title;图右文左,引号装饰
-- `lower-third` — 新闻条,bottom 条状卡片,名称 + 职位 + logo
-- `picture-in-picture` — 主内容 + 小窗口(另一个 slide 或 image 循环)
-- `timeline-roadmap` — 水平/垂直时间轴,节点 stagger
-- `end-card` — 订阅/关注提示,末尾 slide,有 "like + subscribe + bell" icon 占位或自定义 text
-- 每个 ~80-120 行,参考现有模板结构
-- **价值**: 覆盖更多常用场景,特别是 b-roll / 播客 / 企业宣传
+**[x] #R4 5 个企业模板** → 完成(模板从 11 扩到 16)
+- `testimonial` — 圆形 portrait 左,大引号字符 + blockquote + attribution 右,可选 company 标签
+- `lower-third` — 左侧 accent-strip + 暗卡片栏,支持 tag (LIVE/CEO/...) + name + role,从左 slide-in + 内部 stagger fade
+- `picture-in-picture` — 全屏主 image + 右下角小窗 pip image,pip 从 scale(0.3) pop 入场
+- `timeline-roadmap` — 水平 rail + N 节点,alternating 上下 label,rail scaleX 入场,nodes 180 ms stagger(dot scale-pop + label + period)
+- `end-card` — 大 CTA + sub-CTA + 3 圆形 action icon(默认 emoji),actions 140 ms stagger scale-pop
+- DESIGN.md × 模板矩阵已扩展到 16 行
+- 测试:+18 新测试(每个模板 3-4 条)
 
 **[ ] #R5 SVG path draw-in / morph 支持(1.5 天)**
 - 新增 SlideTemplate `svg-draw-in` 或者扩展现有模板支持 `<svg>` inline asset

@@ -1,5 +1,6 @@
 import { bulletStagger, BULLET_STAGGER_CSS } from './bullet-stagger';
 import { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
+import { endCard, END_CARD_CSS } from './end-card';
 import { heroFadeUp, HERO_FADE_UP_CSS } from './hero-fade-up';
 import {
   imageLeftText,
@@ -9,9 +10,13 @@ import {
 import { kenBurnsZoom, KEN_BURNS_CSS } from './ken-burns';
 import { kineticType, KINETIC_TYPE_CSS } from './kinetic-type';
 import { logoOutro, LOGO_OUTRO_CSS } from './logo-outro';
+import { lowerThird, LOWER_THIRD_CSS } from './lower-third';
 import { photoCard, PHOTO_CARD_CSS } from './photo-card';
+import { pictureInPicture, PIP_CSS } from './picture-in-picture';
 import { quoteCard, QUOTE_CARD_CSS } from './quote-card';
 import { splitReveal, SPLIT_REVEAL_CSS } from './split-reveal';
+import { testimonial, TESTIMONIAL_CSS } from './testimonial';
+import { timelineRoadmap, TIMELINE_ROADMAP_CSS } from './timeline-roadmap';
 import type { SlideTemplate } from './types';
 
 export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
@@ -26,6 +31,11 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'kinetic-type': kineticType,
   'logo-outro': logoOutro,
   'data-chart-reveal': dataChartReveal,
+  testimonial: testimonial,
+  'lower-third': lowerThird,
+  'picture-in-picture': pictureInPicture,
+  'timeline-roadmap': timelineRoadmap,
+  'end-card': endCard,
 };
 
 /**
@@ -45,6 +55,11 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'kinetic-type': KINETIC_TYPE_CSS,
   'logo-outro': LOGO_OUTRO_CSS,
   'data-chart-reveal': DATA_CHART_REVEAL_CSS,
+  testimonial: TESTIMONIAL_CSS,
+  'lower-third': LOWER_THIRD_CSS,
+  'picture-in-picture': PIP_CSS,
+  'timeline-roadmap': TIMELINE_ROADMAP_CSS,
+  'end-card': END_CARD_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {
