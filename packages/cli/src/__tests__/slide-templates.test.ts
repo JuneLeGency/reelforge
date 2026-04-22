@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
   archDiagram,
+  audioWaveform,
   bulletStagger,
+  chartLine,
+  chartPie,
   codeBlock,
   dataChartReveal,
   dataGrid,
@@ -32,7 +35,10 @@ describe('SLIDE_TEMPLATES registry', () => {
     const names = listTemplateNames().sort();
     expect(names).toEqual([
       'arch-diagram',
+      'audio-waveform',
       'bullet-stagger',
+      'chart-line',
+      'chart-pie',
       'code-block',
       'data-chart-reveal',
       'data-grid',
@@ -85,6 +91,149 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('data-grid')).toBe(dataGrid);
     expect(resolveTemplate('news-title')).toBe(newsTitle);
     expect(resolveTemplate('gradient-bg')).toBe(gradientBg);
+    expect(resolveTemplate('chart-line')).toBe(chartLine);
+    expect(resolveTemplate('chart-pie')).toBe(chartPie);
+    expect(resolveTemplate('audio-waveform')).toBe(audioWaveform);
+  });
+});
+
+describe('chartLine template', () => {
+  test('parses "x: labels" + "series: values" bullets', () => {
+    const out = chartLine({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Growth',
+      bullets: [
+        'x: Jan,Feb,Mar,Apr',
+        'Revenue: 10, 24, 19, 42',
+        'Users: 5, 11, 17, 30',
+      ],
+    });
+    expect(out.html).toContain('<svg');
+    // x labels rendered as <text>
+    expect(out.html).toContain('>Jan<');
+    expect(out.html).toContain('>Apr<');
+    // two series → two polylines with series-path class
+    expect((out.html.match(/class="series-path"/g) || []).length).toBe(2);
+    // legend with both series names
+    expect(out.html).toContain('>Revenue<');
+    expect(out.html).toContain('>Users<');
+  });
+
+  test('series-path animates stroke-dashoffset from length to 0', () => {
+    const out = chartLine({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      bullets: ['Sales: 10, 20, 30'],
+    });
+    const p = out.animations.find((a) => a.selector.includes('.series-path'))!;
+    expect(p).toBeDefined();
+    const first = p.keyframes[0]!.props.strokeDashoffset as string;
+    const last = p.keyframes.at(-1)!.props.strokeDashoffset as string;
+    // starts at full length (non-zero), ends at 0
+    expect(Number.parseFloat(first)).toBeGreaterThan(0);
+    expect(Number.parseFloat(last)).toBe(0);
+  });
+});
+
+describe('chartPie template', () => {
+  test('normalizes slices and shows percentages in legend', () => {
+    const out = chartPie({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'Share',
+      bullets: ['A: 50', 'B: 30', 'C: 20'],
+    });
+    expect((out.html.match(/class="slice"/g) || []).length).toBe(3);
+    expect(out.html).toContain('50.0%');
+    expect(out.html).toContain('30.0%');
+    expect(out.html).toContain('20.0%');
+  });
+
+  test('slices stagger 180 ms and sweep to stroke-dashoffset 0', () => {
+    const out = chartPie({
+      index: 0,
+      startMs: 0,
+      endMs: 6000,
+      bullets: ['A: 1', 'B: 1', 'C: 1'],
+    });
+    const starts = out.animations
+      .filter((a) => /\.slice\[data-i="\d+"\]/.test(a.selector))
+      .map((a) => a.keyframes[1]!.atMs)
+      .sort((a, b) => a - b);
+    expect(starts[1]! - starts[0]!).toBe(180);
+    expect(starts[2]! - starts[1]!).toBe(180);
+  });
+
+  test('skips bullets that are not numeric', () => {
+    const out = chartPie({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      bullets: ['A: 10', 'B:', 'bad bullet', 'C: 20'],
+    });
+    expect((out.html.match(/class="slice"/g) || []).length).toBe(2);
+  });
+});
+
+describe('audioWaveform template', () => {
+  test('renders a bar grid of N elements (default 40, clamped 8..64)', () => {
+    const out = audioWaveform({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'Track 1',
+    });
+    const bars = (out.html.match(/class="bar"/g) || []).length;
+    expect(bars).toBe(40);
+  });
+
+  test('extras.bars clamps into [8, 64]', () => {
+    const small = audioWaveform({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'x',
+      extras: { bars: 3 },
+    });
+    expect((small.html.match(/class="bar"/g) || []).length).toBe(8);
+    const big = audioWaveform({
+      index: 0,
+      startMs: 0,
+      endMs: 4000,
+      title: 'x',
+      extras: { bars: 200 },
+    });
+    expect((big.html.match(/class="bar"/g) || []).length).toBe(64);
+  });
+
+  test('each bar gets a sequence of scaleY keyframes sampled every 100 ms', () => {
+    const out = audioWaveform({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      title: 'x',
+      extras: { bars: 8 },
+    });
+    const barAnim = out.animations.find((a) =>
+      a.selector.includes('.bar[data-i="0"]'),
+    )!;
+    // 5000 / 100 = 50 samples + one leading zero-opacity frame → ~51+
+    expect(barAnim.keyframes.length).toBeGreaterThan(20);
+    // Values should stay within the clamped scaleY range [0.15, ~1.1]
+    for (const kf of barAnim.keyframes) {
+      const t = kf.props.transform as string | undefined;
+      if (!t) continue;
+      const m = t.match(/scaleY\(([-\d.]+)\)/);
+      if (m) {
+        const v = Number.parseFloat(m[1]!);
+        expect(v).toBeGreaterThanOrEqual(0.1);
+        expect(v).toBeLessThanOrEqual(1.2);
+      }
+    }
   });
 });
 

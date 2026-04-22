@@ -28,3 +28,6 @@ export { codeBlock, CODE_BLOCK_CSS } from './code-block';
 export { dataGrid, DATA_GRID_CSS } from './data-grid';
 export { newsTitle, NEWS_TITLE_CSS } from './news-title';
 export { gradientBg, GRADIENT_BG_CSS } from './gradient-bg';
+export { chartLine, CHART_LINE_CSS } from './chart-line';
+export { chartPie, CHART_PIE_CSS } from './chart-pie';
+export { audioWaveform, AUDIO_WAVEFORM_CSS } from './audio-waveform';

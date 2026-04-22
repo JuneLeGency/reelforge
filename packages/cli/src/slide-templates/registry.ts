@@ -1,5 +1,8 @@
 import { archDiagram, ARCH_DIAGRAM_CSS } from './arch-diagram';
+import { audioWaveform, AUDIO_WAVEFORM_CSS } from './audio-waveform';
 import { bulletStagger, BULLET_STAGGER_CSS } from './bullet-stagger';
+import { chartLine, CHART_LINE_CSS } from './chart-line';
+import { chartPie, CHART_PIE_CSS } from './chart-pie';
 import { codeBlock, CODE_BLOCK_CSS } from './code-block';
 import { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
 import { dataGrid, DATA_GRID_CSS } from './data-grid';
@@ -48,6 +51,9 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   'data-grid': dataGrid,
   'news-title': newsTitle,
   'gradient-bg': gradientBg,
+  'chart-line': chartLine,
+  'chart-pie': chartPie,
+  'audio-waveform': audioWaveform,
 };
 
 /**
@@ -78,6 +84,9 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   'data-grid': DATA_GRID_CSS,
   'news-title': NEWS_TITLE_CSS,
   'gradient-bg': GRADIENT_BG_CSS,
+  'chart-line': CHART_LINE_CSS,
+  'chart-pie': CHART_PIE_CSS,
+  'audio-waveform': AUDIO_WAVEFORM_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {
