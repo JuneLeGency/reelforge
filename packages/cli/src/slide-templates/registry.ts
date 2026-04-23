@@ -4,6 +4,7 @@ import { bulletStagger, BULLET_STAGGER_CSS } from './bullet-stagger';
 import { chartLine, CHART_LINE_CSS } from './chart-line';
 import { chartPie, CHART_PIE_CSS } from './chart-pie';
 import { codeBlock, CODE_BLOCK_CSS } from './code-block';
+import { composite, COMPOSITE_CSS } from './composite';
 import { dataChartReveal, DATA_CHART_REVEAL_CSS } from './data-chart-reveal';
 import { dataGrid, DATA_GRID_CSS } from './data-grid';
 import { endCard, END_CARD_CSS } from './end-card';
@@ -64,6 +65,7 @@ export const SLIDE_TEMPLATES: Readonly<Record<string, SlideTemplate>> = {
   flowchart: flowchart,
   'ui-3d-reveal': ui3dReveal,
   'image-grid': imageGrid,
+  composite: composite,
 };
 
 /**
@@ -102,6 +104,7 @@ export const SLIDE_TEMPLATE_CSS: Readonly<Record<string, string>> = {
   flowchart: FLOWCHART_CSS,
   'ui-3d-reveal': UI_3D_REVEAL_CSS,
   'image-grid': IMAGE_GRID_CSS,
+  composite: COMPOSITE_CSS,
 };
 
 export function resolveTemplate(name: string | undefined): SlideTemplate | null {

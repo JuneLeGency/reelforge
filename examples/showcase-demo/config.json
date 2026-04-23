@@ -266,6 +266,67 @@
       "transitionDurationMs": 300
     },
     {
+      "template": "composite",
+      "layout": "main-side",
+      "children": [
+        {
+          "area": "main",
+          "template": "hero-fade-up",
+          "title": "Dashboard",
+          "subtitle": "一屏多 widget"
+        },
+        {
+          "area": "side-top",
+          "template": "chart-pie",
+          "bullets": ["web: 52", "ios: 28", "android: 15", "other: 5"],
+          "startOffsetMs": 400
+        },
+        {
+          "area": "side-bottom",
+          "template": "social-follow",
+          "title": "@reelforge",
+          "extras": { "platform": "github" },
+          "startOffsetMs": 800
+        }
+      ]
+    },
+    {
+      "template": "composite",
+      "layout": "hero-kpi",
+      "children": [
+        {
+          "area": "main",
+          "template": "hero-fade-up",
+          "title": "hero-kpi",
+          "subtitle": "左 60% 主视觉 + 右 4 卡片"
+        },
+        {
+          "area": "kpi-tl",
+          "template": "data-grid",
+          "bullets": ["MRR: $42K"],
+          "startOffsetMs": 300
+        },
+        {
+          "area": "kpi-tr",
+          "template": "data-grid",
+          "bullets": ["Users: 1.2M"],
+          "startOffsetMs": 450
+        },
+        {
+          "area": "kpi-bl",
+          "template": "data-grid",
+          "bullets": ["NPS: 68"],
+          "startOffsetMs": 600
+        },
+        {
+          "area": "kpi-br",
+          "template": "data-grid",
+          "bullets": ["Churn: 2.1%"],
+          "startOffsetMs": 750
+        }
+      ]
+    },
+    {
       "template": "logo-outro",
       "title": "Reelforge",
       "subtitle": "开源 · 可组合 · 可扩展",

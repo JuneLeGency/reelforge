@@ -6,6 +6,7 @@ import {
   chartLine,
   chartPie,
   codeBlock,
+  composite,
   dataChartReveal,
   dataGrid,
   endCard,
@@ -45,6 +46,7 @@ describe('SLIDE_TEMPLATES registry', () => {
       'chart-line',
       'chart-pie',
       'code-block',
+      'composite',
       'data-chart-reveal',
       'data-grid',
       'end-card',
@@ -109,6 +111,109 @@ describe('SLIDE_TEMPLATES registry', () => {
     expect(resolveTemplate('flowchart')).toBe(flowchart);
     expect(resolveTemplate('ui-3d-reveal')).toBe(ui3dReveal);
     expect(resolveTemplate('image-grid')).toBe(imageGrid);
+    expect(resolveTemplate('composite')).toBe(composite);
+  });
+});
+
+describe('composite template', () => {
+  test('renders one region per child with grid-area + child ids', () => {
+    const out = composite({
+      index: 3,
+      startMs: 0,
+      endMs: 5000,
+      layout: 'main-side',
+      children: [
+        { template: 'hero-fade-up', area: 'main', title: 'Main' },
+        { template: 'chart-pie', area: 'side-top', bullets: ['A: 50', 'B: 50'] },
+        { template: 'social-follow', area: 'side-bottom', title: '@r', extras: { platform: 'github' } },
+      ],
+    });
+    expect(out.html).toContain('class="slide slide-composite slide-composite--main-side"');
+    expect(out.html).toContain('id="slide-3"');
+    expect((out.html.match(/class="rf-region"/g) || []).length).toBe(3);
+    expect(out.html).toContain('grid-area: main;');
+    expect(out.html).toContain('grid-area: side-top;');
+    expect(out.html).toContain('grid-area: side-bottom;');
+    // child ids are 100_000 + parentIdx*100 + childIdx
+    expect(out.html).toContain('id="slide-100300"');
+    expect(out.html).toContain('id="slide-100301"');
+    expect(out.html).toContain('id="slide-100302"');
+  });
+
+  test('child animations keep their own id-namespaced selectors', () => {
+    const out = composite({
+      index: 0,
+      startMs: 0,
+      endMs: 5000,
+      layout: 'main-side',
+      children: [
+        { template: 'hero-fade-up', area: 'main', title: 'hi' },
+      ],
+    });
+    // Outer scene fade targets the parent.
+    expect(out.animations.some((a) => a.selector === '#slide-0')).toBe(true);
+    // Child animations target the child's own namespaced id, not the parent's.
+    expect(out.animations.some((a) => a.selector.startsWith('#slide-0 '))).toBe(false);
+    expect(
+      out.animations.some((a) => a.selector.startsWith('#slide-100000')),
+    ).toBe(true);
+  });
+
+  test('startOffsetMs shifts the child window inside the parent', () => {
+    const out = composite({
+      index: 0,
+      startMs: 1000,
+      endMs: 5000,
+      layout: 'main-side',
+      children: [
+        { template: 'hero-fade-up', area: 'main', title: 'x' },
+        {
+          template: 'chart-pie',
+          area: 'side-top',
+          bullets: ['A: 50', 'B: 50'],
+          startOffsetMs: 800,
+          durationMs: 2000,
+        },
+      ],
+    });
+    // chart-pie child scene fade should start at parent.startMs + 800 = 1800
+    const childScene = out.animations.find(
+      (a) => a.selector === '#slide-100001',
+    );
+    expect(childScene).toBeDefined();
+    const inStart = childScene!.keyframes.find(
+      (kf) => kf.props.opacity === 1,
+    )!.atMs;
+    expect(inStart).toBe(1800 + 400); // child's own fade-in is 400ms
+  });
+
+  test('unknown layout falls back to main-side grid areas', () => {
+    const out = composite({
+      index: 0,
+      startMs: 0,
+      endMs: 3000,
+      layout: 'no-such-layout',
+      children: [{ template: 'hero-fade-up', title: 'x' }],
+    });
+    expect(out.html).toContain('grid-template-areas:');
+  });
+
+  test('custom layout uses extras.gridTemplate verbatim', () => {
+    const out = composite({
+      index: 0,
+      startMs: 0,
+      endMs: 3000,
+      layout: 'custom',
+      extras: {
+        gridTemplate:
+          "grid-template-columns: 1fr 2fr; grid-template-areas: 'a b';",
+      },
+      children: [
+        { template: 'hero-fade-up', area: 'a', title: 'A' },
+        { template: 'quote-card', area: 'b', title: 'B' },
+      ],
+    });
+    expect(out.html).toContain("grid-template-areas: 'a b'");
   });
 });
 

@@ -4,7 +4,7 @@ import {
   resolveChromeEffect,
   type ChromeEffectAnimation,
 } from '@reelforge/transitions';
-import type { SlideAnimation, SlideSpec } from './types';
+import type { CompositeChild, SlideAnimation, SlideSpec } from './types';
 import { listTemplateNames, resolveTemplate } from './registry';
 import { escapeAttr, escapeText } from './escape';
 import { expandSpringAnimation, isSpringEasingName } from './spring';
@@ -27,6 +27,10 @@ export interface BuildSlideInstance {
   endMs: number;
   /** Arbitrary extras passed to the template. */
   extras?: Record<string, string | number | undefined> | undefined;
+  /** Composite layout preset (only read by the `composite` template). */
+  layout?: string | undefined;
+  /** Composite children (only read by the `composite` template). */
+  children?: readonly CompositeChild[] | undefined;
 }
 
 export interface TransitionEvent {
@@ -131,6 +135,8 @@ export function renderTemplatedComposition(opts: RenderCompositionOptions): stri
         indexLabel: s.extras?.indexLabel ?? String(i + 1).padStart(2, '0'),
         totalLabel: s.extras?.totalLabel ?? String(slides.length).padStart(2, '0'),
       },
+      ...(s.layout !== undefined ? { layout: s.layout } : {}),
+      ...(s.children !== undefined ? { children: s.children } : {}),
     };
     const out = template(spec);
     parts.push(out.html);

@@ -36,3 +36,4 @@ export { musicCard, MUSIC_CARD_CSS } from './music-card';
 export { flowchart, FLOWCHART_CSS } from './flowchart';
 export { ui3dReveal, UI_3D_REVEAL_CSS } from './ui-3d-reveal';
 export { imageGrid, IMAGE_GRID_CSS } from './image-grid';
+export { composite, COMPOSITE_CSS, LAYOUT_NAMES } from './composite';

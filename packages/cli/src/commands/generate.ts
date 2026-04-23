@@ -64,6 +64,27 @@ export interface SlideContent {
    * Values must be string or number (JSON-safe).
    */
   extras?: Readonly<Record<string, string | number | undefined>> | undefined;
+  /**
+   * Nested children for the `composite` template only. Each child is a
+   * (template + area + content) triple that renders into one cell of
+   * the layout grid. One level deep — children cannot themselves have
+   * children. See @reelforge/cli/slide-templates/composite for layouts.
+   */
+  children?: CompositeChildContent[] | undefined;
+  /** Composite layout preset (main-side / tri-column / hero-kpi / …). */
+  layout?: string | undefined;
+}
+
+export interface CompositeChildContent {
+  template: string;
+  area?: string | undefined;
+  startOffsetMs?: number | undefined;
+  durationMs?: number | undefined;
+  title?: string | undefined;
+  subtitle?: string | undefined;
+  image?: string | undefined;
+  bullets?: readonly string[] | undefined;
+  extras?: Readonly<Record<string, string | number | undefined>> | undefined;
 }
 
 export interface GenerateConfig {
@@ -160,6 +181,69 @@ export function parseGenerateConfig(raw: unknown): GenerateConfig {
             throw new GenerateConfigError(
               `config.slides[${i}].extras.${ek} must be a string or number`,
             );
+          }
+        }
+      }
+      if (s.layout !== undefined && typeof s.layout !== 'string') {
+        throw new GenerateConfigError(`config.slides[${i}].layout must be a string`);
+      }
+      if (s.children !== undefined) {
+        if (!Array.isArray(s.children)) {
+          throw new GenerateConfigError(`config.slides[${i}].children must be an array`);
+        }
+        for (const [ci, ch] of (s.children as unknown[]).entries()) {
+          if (typeof ch !== 'object' || ch === null || Array.isArray(ch)) {
+            throw new GenerateConfigError(
+              `config.slides[${i}].children[${ci}] must be an object`,
+            );
+          }
+          const c = ch as Record<string, unknown>;
+          if (typeof c.template !== 'string' || c.template === '') {
+            throw new GenerateConfigError(
+              `config.slides[${i}].children[${ci}].template must be a non-empty string`,
+            );
+          }
+          for (const k of ['area', 'title', 'subtitle', 'image']) {
+            if (c[k] !== undefined && typeof c[k] !== 'string') {
+              throw new GenerateConfigError(
+                `config.slides[${i}].children[${ci}].${k} must be a string`,
+              );
+            }
+          }
+          for (const k of ['startOffsetMs', 'durationMs']) {
+            if (c[k] !== undefined && (typeof c[k] !== 'number' || !Number.isFinite(c[k] as number))) {
+              throw new GenerateConfigError(
+                `config.slides[${i}].children[${ci}].${k} must be a finite number`,
+              );
+            }
+          }
+          if (c.bullets !== undefined) {
+            if (!Array.isArray(c.bullets)) {
+              throw new GenerateConfigError(
+                `config.slides[${i}].children[${ci}].bullets must be an array`,
+              );
+            }
+            for (const b of c.bullets) {
+              if (typeof b !== 'string') {
+                throw new GenerateConfigError(
+                  `config.slides[${i}].children[${ci}].bullets entries must be strings`,
+                );
+              }
+            }
+          }
+          if (c.extras !== undefined) {
+            if (typeof c.extras !== 'object' || c.extras === null || Array.isArray(c.extras)) {
+              throw new GenerateConfigError(
+                `config.slides[${i}].children[${ci}].extras must be an object`,
+              );
+            }
+            for (const [ek, ev] of Object.entries(c.extras)) {
+              if (ev !== undefined && typeof ev !== 'string' && typeof ev !== 'number') {
+                throw new GenerateConfigError(
+                  `config.slides[${i}].children[${ci}].extras.${ek} must be a string or number`,
+                );
+              }
+            }
           }
         }
       }
@@ -881,6 +965,8 @@ export const generateCommand = defineCommand({
         transition?: string;
         transitionDurationMs?: number;
         extras?: Record<string, string | number | undefined>;
+        layout?: string;
+        children?: CompositeChildContent[];
       }> = [];
 
       if (config.slides && config.slides.length > 0) {
@@ -934,6 +1020,60 @@ export const generateCommand = defineCommand({
             }
             extras = stagedExtras;
           }
+          // composite: recursively stage child image + extras + bullets
+          // image paths, and validate each child.template exists.
+          let children = s.children;
+          if (children && children.length > 0) {
+            const stagedChildren: CompositeChildContent[] = [];
+            for (const c of children) {
+              if (!resolveTemplate(c.template)) {
+                console.error(
+                  `Unknown composite child template "${c.template}" in slide ${inputs.length}. Available: ${listTemplateNames().join(', ')}`,
+                );
+                process.exit(2);
+              }
+              const childStagedImage = c.image ? await stageImage(c.image) : undefined;
+              let childBullets = c.bullets;
+              if (
+                childBullets &&
+                (c.template === 'image-grid' || c.template === 'ui-3d-reveal')
+              ) {
+                const stagedBullets: string[] = [];
+                for (const b of childBullets) {
+                  if (/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(b)) {
+                    stagedBullets.push(await stageImage(b));
+                  } else {
+                    stagedBullets.push(b);
+                  }
+                }
+                childBullets = stagedBullets;
+              }
+              let childExtras = c.extras;
+              if (childExtras) {
+                const stagedChildExtras: Record<string, string | number | undefined> = {
+                  ...childExtras,
+                };
+                for (const [k, v] of Object.entries(stagedChildExtras)) {
+                  if (typeof v === 'string' && /\.(png|jpe?g|gif|webp|avif|svg)$/i.test(v)) {
+                    stagedChildExtras[k] = await stageImage(v);
+                  }
+                }
+                childExtras = stagedChildExtras;
+              }
+              stagedChildren.push({
+                template: c.template,
+                ...(c.area !== undefined ? { area: c.area } : {}),
+                ...(c.startOffsetMs !== undefined ? { startOffsetMs: c.startOffsetMs } : {}),
+                ...(c.durationMs !== undefined ? { durationMs: c.durationMs } : {}),
+                ...(c.title !== undefined ? { title: c.title } : {}),
+                ...(c.subtitle !== undefined ? { subtitle: c.subtitle } : {}),
+                ...(childStagedImage !== undefined ? { image: childStagedImage } : {}),
+                ...(childBullets !== undefined ? { bullets: childBullets } : {}),
+                ...(childExtras !== undefined ? { extras: childExtras } : {}),
+              });
+            }
+            children = stagedChildren;
+          }
           inputs.push({
             template,
             ...(s.title !== undefined ? { title: s.title } : {}),
@@ -945,6 +1085,8 @@ export const generateCommand = defineCommand({
               ? { transitionDurationMs: s.transitionDurationMs }
               : {}),
             ...(extras !== undefined ? { extras } : {}),
+            ...(s.layout !== undefined ? { layout: s.layout } : {}),
+            ...(children !== undefined ? { children } : {}),
           });
         }
       } else if (config.images && config.images.length > 0 && globalTemplate) {
@@ -969,6 +1111,8 @@ export const generateCommand = defineCommand({
           ...(content.image !== undefined ? { image: content.image } : {}),
           ...(content.bullets !== undefined ? { bullets: content.bullets } : {}),
           ...(content.extras !== undefined ? { extras: content.extras } : {}),
+          ...(content.layout !== undefined ? { layout: content.layout } : {}),
+          ...(content.children !== undefined ? { children: content.children } : {}),
         };
       });
       slidesCount = templated.length;

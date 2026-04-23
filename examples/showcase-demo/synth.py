@@ -58,6 +58,9 @@ LINES = [
     "audio waveform,频谱可视化。",
     "music card,正在播放。",
     "social follow,关注订阅卡。",
+    # composite(嵌套布局)
+    "composite,一屏多 widget 组合。",
+    "hero-kpi 布局,左主右侧 KPI。",
     # closing
     "logo outro,Logo 收束。",
     "end card,谢谢观看。",

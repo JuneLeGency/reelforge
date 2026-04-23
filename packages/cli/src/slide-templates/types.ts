@@ -24,6 +24,49 @@ export interface SlideSpec {
   bullets?: readonly string[] | undefined;
   /** Free-form slots — templates may consume or ignore. */
   extras?: Readonly<Record<string, string | number | undefined>> | undefined;
+  /**
+   * Nested children for the `composite` template. One level deep only —
+   * a child cannot itself have `children` (keeps selector / timing math
+   * tractable). See CompositeChild for the per-child shape.
+   */
+  children?: readonly CompositeChild[] | undefined;
+  /**
+   * Grid layout preset for the `composite` template:
+   *   'main-side'   — 2fr main + 1fr side (side split top/bottom)
+   *   'tri-column'  — 3 equal columns (left / center / right)
+   *   'hero-kpi'    — 60% main + 40% 2×2 kpi grid
+   *   'dashboard-4' — 2×2 quadrants (top-left / top-right / bottom-left / bottom-right)
+   *   'banner-grid' — top banner + 3 columns below (tri-feature)
+   *   'custom'      — use extras.gridTemplate verbatim
+   */
+  layout?: string | undefined;
+}
+
+/**
+ * One child in a composite layout. A child reuses any registered
+ * template (hero-fade-up / chart-pie / social-follow / …) rendered into
+ * one region of the parent slide's grid. Time is relative to the
+ * parent's [startMs, endMs] window.
+ */
+export interface CompositeChild {
+  /** Template name from SLIDE_TEMPLATES. */
+  template: string;
+  /**
+   * Grid area name (must match the layout's template-areas) — see
+   * SlideSpec.layout for the presets' area names. For 'custom', the
+   * area value is whatever the author writes into extras.gridTemplate.
+   */
+  area?: string | undefined;
+  /** ms offset from parent.startMs. Default 0. */
+  startOffsetMs?: number | undefined;
+  /** ms span. Default = parent duration minus startOffset. */
+  durationMs?: number | undefined;
+  /** Same slots a template consumes. */
+  title?: string | undefined;
+  subtitle?: string | undefined;
+  image?: string | undefined;
+  bullets?: readonly string[] | undefined;
+  extras?: Readonly<Record<string, string | number | undefined>> | undefined;
 }
 
 /**
